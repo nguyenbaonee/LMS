@@ -21,7 +21,7 @@ public class StudentResponse {
 
     String email;
 
-    List<Image> avatar;
+    List<ImageResponse> avatar;
 
     Status status = Status.ACTIVE;
 

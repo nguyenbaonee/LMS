@@ -18,14 +18,14 @@ public interface StudentRepo extends JpaRepository<Student, Long> {
     SELECT s.id from Student s
     WHERE (:name IS NULL OR LOWER(s.name) LIKE :name ESCAPE '\\')
     AND (:email IS NULL OR s.email = :email)
-    AND s.status ='1'
+    AND s.status ='ACTIVE'
 """)
     Page<Long> searchIds(Pageable pageable, @Param("name") String name,@Param("email") String email);
 
     @Query("""
     SELECT DISTINCT s FROM Student s
-    LEFT JOIN FETCH s.avatar a ON a.status = '1'
-    LEFT JOIN FETCH s.enrollments e ON e.status = '1'
+    LEFT JOIN FETCH s.avatar a ON a.status = 'ACTIVE'
+    LEFT JOIN FETCH s.enrollments e ON e.status = 'ACTIVE'
     WHERE s.id IN :studentIds
 """)
     List<Student> findAllByImageAndEnrollments(@Param("studentIds") List<Long> studentIds);

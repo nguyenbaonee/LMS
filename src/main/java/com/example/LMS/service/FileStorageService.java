@@ -35,7 +35,7 @@ public class FileStorageService {
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
         // Trả về đường dẫn web (có thể map với /uploads/ trong controller)
-        return "/uploads/" + objectType.name().toLowerCase() + "/" + fileType.name().toLowerCase() + "/" + filename;
+        return file.getOriginalFilename();
     }
 
     public void deleteFiles(List<String> files){

@@ -51,6 +51,9 @@ public class StudentService {
         }
         Student student = studentMap.toStudent(studentRequest);
         studentRepo.save(student);
+        if (images == null || images.isEmpty()) {
+            return studentMap.toStdResponse(student);
+        }
 
         List<Image> avatar = new ArrayList<>();
         List<String> savedFilePaths = new ArrayList<>();
@@ -112,31 +115,33 @@ public class StudentService {
     @Transactional(rollbackFor = Exception.class)
     public StudentResponse updateStudent(Long id, StudentUpdate studentUpdate, List<MultipartFile> images,
                                          List<Long> deleteAvatarsId, Long mainAvatarId) throws IOException {
+        //check theo Id va Status
         Student student = studentRepo.findByIdAndStatus(id, Status.ACTIVE)
                 .orElseThrow(() -> new AppException(ErrorCode.STUDENTNOTFOUND));
 
         studentMap.updateStudent(studentUpdate, student);
 
+        //Xoa mem cac anh co trong list xoa
         if(deleteAvatarsId != null && !deleteAvatarsId.isEmpty()){
             for(Long deleteAvatar : deleteAvatarsId){
                 Image image = imageRepo.findById(deleteAvatar).orElseThrow(() -> new AppException(ErrorCode.IMAGENOTFOUND));
-                String url = image.getUrl();
-                List<String> urls = new ArrayList<>();
-                urls.add(url);
-                fileStorageService.deleteFiles(urls);
-                imageRepo.deleteById(deleteAvatar);
-                student.getAvatar().removeIf(img -> deleteAvatarsId.contains(img.getId()));
+                    image.setStatus(Status.DELETED);
+                    imageRepo.save(image);
+//                String url = image.getUrl();
+//                List<String> urls = new ArrayList<>();
+//                urls.add(url);
+//                fileStorageService.deleteFiles(urls);
+//                imageRepo.deleteById(deleteAvatar);
+//                student.getAvatar().removeIf(img -> deleteAvatarsId.contains(img.getId()));
             }
         }
-        boolean hasPrimary = student.getAvatar().stream().anyMatch(Image::isPrimary);
-        if(!hasPrimary && !student.getAvatar().isEmpty()){
-            student.getAvatar().forEach(img -> img.setPrimary(false));
-            student.getAvatar().get(0).setPrimary(true);
-        }
+
+        //list anh moi
         List<Image> avatar = new ArrayList<>();
         List<String> savedFilePaths = new ArrayList<>();
 
         try{
+            //luu anh moi
             if(images != null && !images.isEmpty()){
                 for(MultipartFile file : images) {
                     String path = fileStorageService.save(file, ObjectType.STUDENT, ImageType.IMAGE);
@@ -149,19 +154,30 @@ public class StudentService {
                     savedFilePaths.add(path);
                 }
             }
+            //luu lai avatar
+            student.getAvatar().addAll(avatar);
             imageRepo.saveAll(avatar);
-            student.setAvatar(avatar);
             studentRepo.save(student);
 
+            List<Image> avatarActive = student.getAvatar().stream()
+                    .filter(img -> img.getStatus() == Status.ACTIVE)
+                    .toList();
+
+            //xu ly avatar hien thi
             if(mainAvatarId != null){
-                for(Image img : student.getAvatar()){
+                boolean exists = avatarActive.stream()
+                        .anyMatch(img -> img.getId().equals(mainAvatarId));
+
+                if (!exists) {
+                    throw new AppException(ErrorCode.AVATAR_NOT_FOUND);
+                }
+                for(Image img : avatarActive) {
                     img.setPrimary(img.getId().equals(mainAvatarId));
                 }
-            } else if(!student.getAvatar().isEmpty()){
-                student.getAvatar().forEach(img -> img.setPrimary(false));
-                student.getAvatar().get(0).setPrimary(true);
+            } else if(!avatarActive.isEmpty()){
+                avatarActive.forEach(img -> img.setPrimary(false));
+                avatarActive.get(0).setPrimary(true);
             }
-
             return studentMap.toStdResponse(student);
         }
         catch (Exception e){

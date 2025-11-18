@@ -40,7 +40,7 @@ public class Lesson {
     List<Image> thumbnail;
 
     @Column(nullable = false)
-    Integer lessonOrder = 1;
+    Integer lessonOrder;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
