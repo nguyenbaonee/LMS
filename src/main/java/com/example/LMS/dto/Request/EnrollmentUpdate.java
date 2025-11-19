@@ -9,7 +9,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class EnrollmentRequest {
-    Long studentId;
-    List<Long> courseIds;
+public class EnrollmentUpdate {
+    List<Long> newCourseIds;
+    List<Long> deleteCourseIds;
 }

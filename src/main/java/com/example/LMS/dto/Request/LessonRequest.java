@@ -2,6 +2,7 @@ package com.example.LMS.dto.Request;
 
 import com.example.LMS.entity.Course;
 import com.example.LMS.entity.Image;
+import jakarta.persistence.Column;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -23,6 +24,7 @@ public class LessonRequest {
 
     List<Image> thumbnail;
 
+    @Length(min = 1, max = 200, message ="valid.lesson.length" )
     @NotBlank(message = "valid.notBlank")
     Integer lessonOrder;
 }

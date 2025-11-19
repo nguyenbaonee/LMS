@@ -16,7 +16,7 @@ public class CourseRequest {
     @Length(min = 1, max = 150, message = "valid.course.length")
     String name;
 
-    @NotBlank @Length(min = 1, max = 50)
+    @NotBlank(message = "valid.notBlank") @Length(min = 1, max = 50,message = "valid.course.length")
     String code;
 
     String description;

@@ -5,6 +5,8 @@ import com.example.LMS.Exception.ErrorCode;
 import com.example.LMS.dto.Request.StudentRequest;
 import com.example.LMS.dto.Request.StudentUpdate;
 import com.example.LMS.dto.Response.StudentResponse;
+import com.example.LMS.dto.dtoProjection.StudentAvatarDTO;
+import com.example.LMS.dto.dtoProjection.StudentDTO;
 import com.example.LMS.entity.Image;
 import com.example.LMS.entity.Student;
 import com.example.LMS.enums.ImageType;
@@ -100,40 +102,37 @@ public class StudentService {
             return new PageImpl<>(List.of(), pageable, 0);
         }
         List<Long> ids = studentIds.getContent();
-        List<Student> students = studentRepo.findAllByImageAndEnrollments(ids);
-
-        Map<Long, Student> studentMapId = students.stream()
-                .collect(Collectors.toMap(Student::getId, s -> s));
-
-        List<Student> studentResponse = ids.stream()
-                .map(studentMapId::get)
-                .toList();
-        List<StudentResponse> studentResponseList = studentMap.toStdResponses(studentResponse);
+        List<StudentAvatarDTO> studentDTOS = studentRepo.findStudentAvatars(ids);
+        List<StudentDTO> studentDTOList = studentRepo.findStudentDTOsByIds(ids);
+        Map<Long, List<Image>> studentMapId = studentDTOS.stream()
+                .collect(Collectors.groupingBy(
+                        StudentAvatarDTO::getId,
+                        Collectors.mapping(StudentAvatarDTO::getImage, Collectors.toList())
+                ));
+        studentDTOList.forEach(studentDTO -> {studentDTO.setAvatar(studentMapId
+                .getOrDefault(studentDTO.getId(), List.of()));});
+        List<StudentResponse> studentResponseList = studentMap.toStdResponseFromDTOs(studentDTOList);
         return new PageImpl<>(studentResponseList, pageable, studentIds.getTotalElements());
     }
 
     @Transactional(rollbackFor = Exception.class)
     public StudentResponse updateStudent(Long id, StudentUpdate studentUpdate, List<MultipartFile> images,
                                          List<Long> deleteAvatarsId, Long mainAvatarId) throws IOException {
-        //check theo Id va Status
+        //check theo id va Status
         Student student = studentRepo.findByIdAndStatus(id, Status.ACTIVE)
                 .orElseThrow(() -> new AppException(ErrorCode.STUDENTNOTFOUND));
 
         studentMap.updateStudent(studentUpdate, student);
 
         //Xoa mem cac anh co trong list xoa
-        if(deleteAvatarsId != null && !deleteAvatarsId.isEmpty()){
-            for(Long deleteAvatar : deleteAvatarsId){
-                Image image = imageRepo.findById(deleteAvatar).orElseThrow(() -> new AppException(ErrorCode.IMAGENOTFOUND));
-                    image.setStatus(Status.DELETED);
-                    imageRepo.save(image);
-//                String url = image.getUrl();
-//                List<String> urls = new ArrayList<>();
-//                urls.add(url);
-//                fileStorageService.deleteFiles(urls);
-//                imageRepo.deleteById(deleteAvatar);
-//                student.getAvatar().removeIf(img -> deleteAvatarsId.contains(img.getId()));
+        if(deleteAvatarsId != null && !deleteAvatarsId.isEmpty()) {
+//            List<Image> imagesDelete = imageRepo.findAllById(deleteAvatarsId);
+            List<Image> imagesDelete = imageRepo.findAllByIdInAndStatus(deleteAvatarsId,Status.ACTIVE);
+            if(imagesDelete.size() != deleteAvatarsId.size()){
+                throw new AppException(ErrorCode.AVATAR_NOT_FOUND);
             }
+            imagesDelete.forEach(image -> {image.setStatus(Status.DELETED);});
+            imageRepo.saveAll(imagesDelete);
         }
 
         //list anh moi

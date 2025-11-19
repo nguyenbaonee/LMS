@@ -36,5 +36,7 @@ public class Enrollment {
     Status status = Status.ACTIVE;
 
     LocalDateTime enrolledAt = LocalDateTime.now();
+
+
 }
 

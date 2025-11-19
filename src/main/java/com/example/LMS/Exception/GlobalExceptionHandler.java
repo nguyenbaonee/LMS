@@ -3,6 +3,7 @@ package com.example.LMS.Exception;
 import com.example.LMS.dto.ApiResponse;
 import org.springframework.context.MessageSource;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -23,5 +24,12 @@ public class GlobalExceptionHandler {
         apiResponse.setCode(errorCode.getCode());
         apiResponse.setMessage(messageSource.getMessage(errorCode.getMessage(), null, locale));
         return ResponseEntity.badRequest().body(apiResponse);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiResponse> handleMissingParam(MissingServletRequestParameterException ex, Locale locale) {
+        return ResponseEntity.badRequest().body(ApiResponse.builder()
+                .message(messageSource.getMessage("{valid.MultipartFile.required}", null, locale))
+                .build());
     }
 }

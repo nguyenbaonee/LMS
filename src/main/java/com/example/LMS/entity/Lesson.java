@@ -26,10 +26,11 @@ public class Lesson {
     @JoinColumn(name = "course_id")
     Course course;
 
-    @Column(nullable = false, length = 200)
+    @Column(nullable = false, length = 200, unique = true)
     String title;
 
     @OneToMany
+    @Column(nullable = false, unique = true)
     @JoinColumn(name = "objectId", referencedColumnName = "id", insertable = false, updatable = false)
     @Where(clause = "object_type='LESSON' AND type='VIDEO' ")
     List<Image> videoUrl;
@@ -39,7 +40,7 @@ public class Lesson {
     @Where(clause = "object_type='LESSON' AND type='THUMBNAIL' ")
     List<Image> thumbnail;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     Integer lessonOrder;
 
     @Enumerated(EnumType.STRING)
