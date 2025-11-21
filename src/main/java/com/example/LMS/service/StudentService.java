@@ -103,7 +103,7 @@ public class StudentService {
         }
         List<Long> ids = studentIds.getContent();
         List<StudentAvatarDTO> studentDTOS = studentRepo.findStudentAvatars(ids);
-        List<StudentDTO> studentDTOList = studentRepo.findStudentDTOsByIds(ids);
+        List<StudentDTO> studentDTOList = studentRepo.findStudentDTOsByIds(ids, status);
         Map<Long, List<Image>> studentMapId = studentDTOS.stream()
                 .collect(Collectors.groupingBy(
                         StudentAvatarDTO::getId,

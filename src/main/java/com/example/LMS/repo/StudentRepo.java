@@ -37,9 +37,9 @@ SELECT new com.example.LMS.dto.dtoProjection.StudentDTO(
 )
 FROM Student s
 WHERE s.id IN :ids
-AND s.status = 'ACTIVE'
+AND s.status = :status
 """)
-    List<StudentDTO> findStudentDTOsByIds(@Param("ids") List<Long> ids);
+    List<StudentDTO> findStudentDTOsByIds(@Param("ids") List<Long> ids, Status status);
 
     Optional<Student> findByIdAndStatus(Long id, Status status);
 
