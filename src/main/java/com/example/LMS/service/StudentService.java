@@ -5,6 +5,7 @@ import com.example.LMS.Exception.ErrorCode;
 import com.example.LMS.dto.Request.StudentRequest;
 import com.example.LMS.dto.Request.StudentUpdate;
 import com.example.LMS.dto.Response.StudentResponse;
+import com.example.LMS.dto.dtoProjection.ImageDTO;
 import com.example.LMS.dto.dtoProjection.StudentAvatarDTO;
 import com.example.LMS.dto.dtoProjection.StudentDTO;
 import com.example.LMS.entity.Image;
@@ -64,16 +65,17 @@ public class StudentService {
             if(images != null && !images.isEmpty()){
                 boolean first = true;
                 for(MultipartFile file : images) {
-                    String url = fileStorageService.save(file, ObjectType.STUDENT, ImageType.IMAGE);
+                    ImageDTO imageDTO = fileStorageService.save(file, ObjectType.STUDENT, ImageType.IMAGE);
                     Image image = new Image();
-                    image.setUrl(url);
+                    image.setUrl(imageDTO.getUrl());
+                    image.setFileName(imageDTO.getFilename());
                     image.setType(ImageType.IMAGE);
                     image.setObjectType(ObjectType.STUDENT);
                     image.setObjectId(student.getId());
                     image.setPrimary(first);
                     first = false;
                     avatar.add(image);
-                    savedFilePaths.add(url);
+                    savedFilePaths.add(imageDTO.getUrl());
                 }
             }
             imageRepo.saveAll(avatar);
@@ -145,14 +147,15 @@ public class StudentService {
             //luu anh moi
             if(images != null && !images.isEmpty()){
                 for(MultipartFile file : images) {
-                    String path = fileStorageService.save(file, ObjectType.STUDENT, ImageType.IMAGE);
+                    ImageDTO imageDTO = fileStorageService.save(file, ObjectType.STUDENT, ImageType.IMAGE);
                     Image image = new Image();
-                    image.setUrl(path);
+                    image.setUrl(imageDTO.getUrl());
+                    image.setFileName(imageDTO.getFilename());
                     image.setType(ImageType.IMAGE);
                     image.setObjectType(ObjectType.STUDENT);
                     image.setObjectId(student.getId());
                     avatar.add(image);
-                    savedFilePaths.add(path);
+                    savedFilePaths.add(imageDTO.getUrl());
                 }
             }
             //luu lai avatar

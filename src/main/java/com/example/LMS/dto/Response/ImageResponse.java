@@ -18,5 +18,6 @@ public class ImageResponse {
     String url;
 
     ImageType type;
-    boolean isPrimary = false;
+    boolean isPrimary;
+    String fileName;
 }

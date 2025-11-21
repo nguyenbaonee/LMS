@@ -5,6 +5,7 @@ import com.example.LMS.Exception.ErrorCode;
 import com.example.LMS.dto.ApiResponse;
 import com.example.LMS.dto.Request.LessonRequest;
 import com.example.LMS.dto.Response.LessonResponse;
+import com.example.LMS.dto.dtoProjection.ImageDTO;
 import com.example.LMS.dto.dtoProjection.LessonDTO;
 import com.example.LMS.dto.dtoProjection.LessonThumbDTO;
 import com.example.LMS.entity.Course;
@@ -88,11 +89,12 @@ public class LessonService {
 
             List<Image> videoList = new ArrayList<>();
             for (MultipartFile file : videos) {
-                String url = fileStorageService.save(file, ObjectType.LESSON, ImageType.VIDEO);
-                videoPaths.add(url);
+                ImageDTO imageDTO = fileStorageService.save(file, ObjectType.LESSON, ImageType.VIDEO);
+                videoPaths.add(imageDTO.getUrl());
 
                 Image video = new Image();
-                video.setUrl(url);
+                video.setUrl(imageDTO.getUrl());
+                video.setFileName(imageDTO.getFilename());
                 video.setObjectType(ObjectType.LESSON);
                 video.setType(ImageType.VIDEO);
                 video.setObjectId(lesson.getId());
@@ -107,11 +109,12 @@ public class LessonService {
                 boolean primary = true;
 
                 for (MultipartFile file : images) {
-                    String url = fileStorageService.save(file, ObjectType.LESSON, ImageType.THUMBNAIL);
-                    imgPaths.add(url);
+                    ImageDTO imageDTO = fileStorageService.save(file, ObjectType.LESSON, ImageType.THUMBNAIL);
+                    imgPaths.add(imageDTO.getUrl());
 
                     Image img = new Image();
-                    img.setUrl(url);
+                    img.setUrl(imageDTO.getUrl());
+                    img.setFileName(imageDTO.getFilename());
                     img.setPrimary(primary);
                     primary = false;
                     img.setObjectType(ObjectType.LESSON);

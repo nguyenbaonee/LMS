@@ -1,5 +1,6 @@
 package com.example.LMS.service;
 
+import com.example.LMS.dto.dtoProjection.ImageDTO;
 import com.example.LMS.enums.ImageType;
 import com.example.LMS.enums.ObjectType;
 import org.springframework.stereotype.Service;
@@ -23,19 +24,20 @@ public class FileStorageService {
         }
     }
 
-    public String save(MultipartFile file, ObjectType objectType, ImageType fileType) throws IOException {
+    public ImageDTO save(MultipartFile file, ObjectType objectType, ImageType fileType) throws IOException {
         Path folder = baseDir.resolve(objectType.name().toLowerCase()).resolve(fileType.name().toLowerCase());
 
         if (!Files.exists(folder)) {
             Files.createDirectories(folder);
         }
-
-        String filename = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        String nameUrl = UUID.randomUUID().toString();
+        String filename = file.getOriginalFilename();
         Path filePath = folder.resolve(filename);
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-// Trả về URL frontend dùng luôn
-        return "/uploads/" + objectType.name().toLowerCase() + "/" + fileType.name().toLowerCase() + "/" + filename;
+        ImageDTO imageDTO= new  ImageDTO();
+        imageDTO.setFilename(filename);
+        imageDTO.setUrl("/uploads/" + objectType.name().toLowerCase() + "/" + fileType.name().toLowerCase() + "/" + nameUrl + filename);
+        return imageDTO;
 
     }
 

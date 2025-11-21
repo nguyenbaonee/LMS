@@ -8,6 +8,7 @@ import com.example.LMS.dto.Request.CourseUpdate;
 import com.example.LMS.dto.Response.CourseResponse;
 import com.example.LMS.dto.dtoProjection.CourseDTO;
 import com.example.LMS.dto.dtoProjection.CourseImageDTO;
+import com.example.LMS.dto.dtoProjection.ImageDTO;
 import com.example.LMS.entity.Course;
 import com.example.LMS.entity.Image;
 import com.example.LMS.enums.ImageType;
@@ -69,9 +70,10 @@ public class CourseService {
                 boolean thumbnailMain = true;
 
                 for (MultipartFile file : images) {
-                    String url = fileStorageService.save(file, ObjectType.COURSE, ImageType.THUMBNAIL);
+                    ImageDTO imageDTO = fileStorageService.save(file, ObjectType.COURSE, ImageType.THUMBNAIL);
                     Image img = new Image();
-                    img.setUrl(url);
+                    img.setUrl(imageDTO.getUrl());
+                    img.setFileName(imageDTO.getFilename());
                     img.setPrimary(thumbnailMain);
                     thumbnailMain = false;
                     img.setObjectType(ObjectType.COURSE);
@@ -79,7 +81,7 @@ public class CourseService {
                     img.setObjectId(course.getId());
 
                     imgList.add(img);
-                    paths.add(url);
+                    paths.add(imageDTO.getUrl());
                 }
                 imageRepo.saveAll(imgList);
                 course.setThumbnail(imgList);
@@ -162,14 +164,15 @@ public class CourseService {
             //luu anh moi
             if(images != null && !images.isEmpty()){
                 for(MultipartFile file : images) {
-                    String path = fileStorageService.save(file, ObjectType.COURSE, ImageType.THUMBNAIL);
+                    ImageDTO imageDTO = fileStorageService.save(file, ObjectType.COURSE, ImageType.THUMBNAIL);
                     Image image = new Image();
-                    image.setUrl(path);
+                    image.setUrl(imageDTO.getUrl());
+                    image.setFileName(imageDTO.getFilename());
                     image.setType(ImageType.THUMBNAIL);
                     image.setObjectType(ObjectType.COURSE);
                     image.setObjectId(course.getId());
                     thumbnail.add(image);
-                    savedFilePaths.add(path);
+                    savedFilePaths.add(imageDTO.getUrl());
                 }
             }
             //luu lai avatar
@@ -209,6 +212,7 @@ public class CourseService {
         Course course = courseRepo.findByIdAndStatus(id, Status.ACTIVE)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
         course.setStatus(Status.DELETED);
+        //xoa them lesson, enrollment neu can
         courseRepo.save(course);
         return ApiResponse.<Void>builder()
                 .build();

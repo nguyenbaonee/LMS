@@ -43,5 +43,7 @@ public class Image {
     @Column(nullable = false)
     Status status = Status.ACTIVE;
 
+    @Column(name = "file_name", nullable = false)
+    String fileName;
 }
 
