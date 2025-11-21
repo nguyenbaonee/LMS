@@ -16,7 +16,9 @@ public enum ErrorCode {
     VIDEO_NOT_EMPTY(1009,"response.lesson.video_not_empty",HttpStatus.BAD_REQUEST),
     LESSON_NOT_FOUND(2001,"response.lesson.not_found",HttpStatus.BAD_REQUEST),
     ENROLLMENT_EXISTS(2002,"response.enrollment.exists",HttpStatus.BAD_REQUEST),
-    ENROLLMENT_NOT_FOUND(2003,"response.enrollment.not_found",HttpStatus.BAD_REQUEST);
+    ENROLLMENT_NOT_FOUND(2003,"response.enrollment.not_found",HttpStatus.BAD_REQUEST),
+    FILE_NOT_FOUND(2004,"response.file.not_found",HttpStatus.BAD_REQUEST),
+    NO_DATA_TO_EXPORT(2005,"response.no-data-to-export",HttpStatus.BAD_REQUEST);
 
     ErrorCode(int code, String message, HttpStatus httpStatus) {
         this.code = code;

@@ -3,6 +3,7 @@ package com.example.LMS.service;
 import com.example.LMS.Exception.AppException;
 import com.example.LMS.Exception.ErrorCode;
 import com.example.LMS.dto.ApiResponse;
+import com.example.LMS.dto.Request.CourseQuery;
 import com.example.LMS.dto.Request.CourseRequest;
 import com.example.LMS.dto.Request.CourseUpdate;
 import com.example.LMS.dto.Response.CourseResponse;
@@ -16,6 +17,7 @@ import com.example.LMS.enums.Status;
 import com.example.LMS.mapper.CourseMapper;
 import com.example.LMS.repo.CourseRepo;
 import com.example.LMS.repo.ImageRepo;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -32,23 +34,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class CourseService {
-    CourseRepo courseRepo;
-    CourseMapper courseMapper;
-    FileStorageService fileStorageService;
-    ImageRepo imageRepo;
-    MessageSource messageSource;
-
-    public CourseService(CourseRepo courseRepo, CourseMapper courseMapper,
-                         FileStorageService fileStorageService, ImageRepo imageRepo,
-                         MessageSource messageSource) {
-        this.courseRepo = courseRepo;
-        this.courseMapper = courseMapper;
-        this.fileStorageService = fileStorageService;
-        this.imageRepo = imageRepo;
-        this.messageSource = messageSource;
-    }
-
+    private final CourseRepo courseRepo;
+    private final CourseMapper courseMapper;
+    private final FileStorageService fileStorageService;
+    private final ImageRepo imageRepo;
+    private final MessageSource messageSource;
 
     @Transactional(rollbackFor = Exception.class)
     public CourseResponse createCourse(CourseRequest courseRequest, List<MultipartFile> images) throws IOException {
@@ -93,23 +85,17 @@ public class CourseService {
         return courseMapper.toCourseResponse(course);
     }
 
-    public Page<CourseResponse> searchCourse(int page, int size, String name, String code){
-        if (name != null && !name.isBlank()) {
-            name = "%" + name.replace("\\", "\\\\")
-                    .replace("%", "\\%")
-                    .replace("_", "\\_")
-                    .toLowerCase() + "%";
-        } else {
-            name = null;
-        }
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Long> courseIds = courseRepo.searchIds(pageable, name, code);
-        if (courseIds.getTotalElements() == 0) {
+    public Page<CourseDTO> searchCourse(CourseQuery query){
+        Pageable pageable = PageRequest.of(query.getPage(), query.getSize());
+
+        Long count = courseRepo.count(query);
+        if (count == 0) {
             return new PageImpl<>(List.of(), pageable, 0);
         }
-        List<Long> ids = courseIds.getContent();
+        List<CourseDTO> courses = courseRepo.search(query, pageable);
+        List<Long> ids = courses.stream().map(CourseDTO::getId).toList();
+
         List<CourseImageDTO> coursesImg = courseRepo.findCoursesWithActiveThumbnails(ids);
-        List<CourseDTO> courses = courseRepo.findCourseDTOsByIds(ids);
         Map<Long, List<Image>> thumbnailsMap = coursesImg.stream()
                 .collect(Collectors.groupingBy(
                         CourseImageDTO::getId,
@@ -117,8 +103,7 @@ public class CourseService {
                 ));
         courses.forEach(course -> course.setThumbnail(
                 thumbnailsMap.getOrDefault(course.getId(), List.of())));
-        List<CourseResponse> courseResponseList = courseMapper.toResponseFromDTOs(courses);
-        return new PageImpl<>(courseResponseList, pageable, courseIds.getTotalElements());
+        return new PageImpl<>(courses, pageable, count);
     }
 
     @Transactional(rollbackFor = Exception.class)

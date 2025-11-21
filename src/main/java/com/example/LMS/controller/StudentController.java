@@ -8,6 +8,7 @@ import com.example.LMS.dto.Response.StudentResponse;
 import com.example.LMS.dto.dtoProjection.StudentDTO;
 import com.example.LMS.enums.Status;
 import com.example.LMS.service.StudentService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
@@ -34,9 +35,20 @@ public class StudentController {
         return studentService.createStd(studentRequest,images);
     }
 
+    @GetMapping("export")
+    public void exportStudent(HttpServletResponse response, StudentQuery query){
+        studentService.export(response, query);
+    }
+
     @GetMapping
     public Page<StudentDTO> searchStudent(StudentQuery query){
         return studentService.searchStudent(query);
+    }
+
+
+    @GetMapping("/by-course")
+    public Page<StudentDTO> searchStudentOfCourse(StudentQuery query){
+        return studentService.searchStudentOfCourse(query);
     }
 
     @PutMapping("/{id}")

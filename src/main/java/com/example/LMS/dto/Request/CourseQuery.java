@@ -8,12 +8,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class StudentQuery extends SearchQuery{
+public class CourseQuery extends SearchQuery{
     private String keyword;
 
     private Status status;
-
-    private String sortBy;
-
-    private Long courseId;
 }

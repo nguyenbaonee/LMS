@@ -1,8 +1,7 @@
-package com.example.LMS.repo;
+package com.example.LMS.repo.impl;
 
 import com.example.LMS.dto.Request.StudentQuery;
 import com.example.LMS.dto.dtoProjection.StudentDTO;
-import com.example.LMS.entity.Student;
 import com.example.LMS.enums.Status;
 import com.example.LMS.repo.extend.StudentRepoExtend;
 import jakarta.persistence.EntityManager;
@@ -23,13 +22,20 @@ public class StudentRepoImpl implements StudentRepoExtend {
     @Override
     public List<StudentDTO> search(StudentQuery studentQuery, Pageable pageable) {
         Map<String, Object> values = new HashMap<>();
-        String sql = "select new com.example.LMS.dto.dtoProjection.StudentDTO(e.id,e.email, e.name, e.status) from Student e "
-                + createWhereQuery(studentQuery.getKeyword(), studentQuery.getStatus(), values)
-                + createOrderQuery(studentQuery.getSortBy());
-        TypedQuery<StudentDTO> query = entityManager.createQuery(sql, StudentDTO.class);
+        StringBuilder sql = new StringBuilder();
+        sql.append("select new com.example.LMS.dto.dtoProjection.StudentDTO(e.id,e.email, e.name, e.status) from Student e");
+        if (studentQuery.getCourseId() != null) {
+            sql.append(" join Enrollment er on e.id = er.student.id ");
+        }
+        sql.append(createWhereQuery(studentQuery.getKeyword(), studentQuery.getStatus(), values));
+        sql.append(createOrderQuery(studentQuery.getSortBy()));
+        TypedQuery<StudentDTO> query = entityManager.createQuery(sql.toString(), StudentDTO.class);
         values.forEach(query::setParameter);
-        query.setFirstResult((pageable.getPageNumber() - 1) * pageable.getPageSize());
-        query.setMaxResults(pageable.getPageSize());
+
+        if (pageable != null) {
+            query.setFirstResult((pageable.getPageNumber() - 1) * pageable.getPageSize());
+            query.setMaxResults(pageable.getPageSize());
+        }
         return query.getResultList();
     }
 
@@ -44,7 +50,7 @@ public class StudentRepoImpl implements StudentRepoExtend {
     }
 
     private String createOrderQuery(String sortBy) {
-        StringBuilder sql = new StringBuilder(" ");
+        StringBuilder sql = new StringBuilder();
         if (StringUtils.hasLength(sortBy)) {
             sql.append(" order by e.").append(sortBy.replace(".", " "));
         }
@@ -53,8 +59,10 @@ public class StudentRepoImpl implements StudentRepoExtend {
 
     private String createWhereQuery(String keyword, Status status, Map<String, Object> values) {
         StringBuilder sql = new StringBuilder();
+        sql.append(" where 1 = 1");
         if (StringUtils.hasText(keyword)) {
-            sql.append(" where ( lower(e.name) like :keyword" + " or lower(e.email) like :keyword )");
+            sql.append(" and ( lower(e.name) like :keyword" +
+                    " or lower(e.email) like :keyword )");
             values.put("keyword", encodeKeyword(keyword));
         }
         

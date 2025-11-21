@@ -16,7 +16,11 @@ import com.example.LMS.enums.Status;
 import com.example.LMS.mapper.StudentMap;
 import com.example.LMS.repo.ImageRepo;
 import com.example.LMS.repo.StudentRepo;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.jxls.common.Context;
+import org.jxls.util.JxlsHelper;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -26,7 +30,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -90,7 +99,7 @@ public class StudentService {
         }
         List<StudentDTO> students = studentRepo.search(query, pageable);
 
-        List<Long> ids = students.stream().map(StudentDTO::getId).collect(Collectors.toList());
+        List<Long> ids = students.stream().map(StudentDTO::getId).toList();
         List<StudentAvatarDTO> studentDTOS = studentRepo.findStudentAvatars(ids);
         Map<Long, List<Image>> studentMapId = studentDTOS.stream()
                 .collect(Collectors.groupingBy(
@@ -182,5 +191,53 @@ public class StudentService {
                 .orElseThrow(() -> new AppException(ErrorCode.STUDENTNOTFOUND));
         student.setStatus(Status.DELETED);
         studentRepo.save(student);
+    }
+
+    public Page<StudentDTO> searchStudentOfCourse(StudentQuery query) {
+        Pageable pageable = PageRequest.of(query.getPage(), query.getSize());
+        Long count = studentRepo.count(query);
+        if (count == 0) {
+            return new PageImpl<>(List.of(), pageable, 0);
+        }
+        List<StudentDTO> students = studentRepo.search(query, pageable);
+
+        List<Long> ids = students.stream().map(StudentDTO::getId).toList();
+        List<StudentAvatarDTO> studentDTOS = studentRepo.findStudentAvatars(ids);
+        Map<Long, List<Image>> studentMapId = studentDTOS.stream()
+                .collect(Collectors.groupingBy(
+                        StudentAvatarDTO::getId,
+                        Collectors.mapping(StudentAvatarDTO::getImage, Collectors.toList())
+                ));
+        students.forEach(student -> student.setAvatar(studentMapId.getOrDefault(student.getId(), List.of())));
+        return new PageImpl<>(students, pageable, count);
+    }
+
+    public void export(HttpServletResponse response, StudentQuery query) {
+        Long count = studentRepo.count(query);
+        if (count == 0) {
+            throw  new AppException(ErrorCode.FILE_NOT_FOUND);
+        }
+        List<StudentDTO> lists = studentRepo.search(query, null);
+
+        try (
+                InputStream templateStream = new ClassPathResource("templates/student_template.xlsx").getInputStream();
+                OutputStream outputStream = response.getOutputStream()
+        ) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+            String timestamp = LocalDateTime.now().format(formatter);
+            String resultFileName = String.format("student_report_%s.xlsx", timestamp);
+
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + resultFileName + "\"");
+
+            Context context = new Context();
+            context.putVar("lists", lists);
+
+            JxlsHelper.getInstance().processTemplate(templateStream, outputStream, context);
+
+            response.flushBuffer();
+        } catch (IOException e) {
+            throw new AppException(ErrorCode.FILE_NOT_FOUND);
+        }
     }
 }

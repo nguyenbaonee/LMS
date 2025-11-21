@@ -38,6 +38,5 @@ public class Enrollment {
 
     LocalDateTime enrolledAt = LocalDateTime.now();
 
-
 }
 

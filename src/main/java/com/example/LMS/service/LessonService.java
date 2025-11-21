@@ -3,6 +3,7 @@ package com.example.LMS.service;
 import com.example.LMS.Exception.AppException;
 import com.example.LMS.Exception.ErrorCode;
 import com.example.LMS.dto.ApiResponse;
+import com.example.LMS.dto.Request.LessonQuery;
 import com.example.LMS.dto.Request.LessonRequest;
 import com.example.LMS.dto.Response.LessonResponse;
 import com.example.LMS.dto.dtoProjection.LessonDTO;
@@ -154,13 +155,19 @@ public class LessonService {
 
         return null;
     }
-    public Page<LessonDTO> getLessonByCourse(int page, int size, Long courseId){
-        if(!courseRepo.existsByIdAndStatus(courseId, Status.ACTIVE)){
+    public Page<LessonDTO> search(LessonQuery query){
+        if(!courseRepo.existsByIdAndStatus(query.getCourseId(), Status.ACTIVE)){
             throw new AppException(ErrorCode.COURSE_NOT_FOUND);
         }
-        Pageable pageable = PageRequest.of(page, size);
-        Page<LessonDTO> lessons = lessonRepo.findByCourseId(courseId,pageable);
-        List<Long> lessonIds = lessons.getContent().stream().map(LessonDTO::getId).toList();
+
+        Pageable pageable = PageRequest.of(query.getPage(), query.getSize());
+
+        Long count = lessonRepo.count(query);
+        if (count == 0) {
+            return new PageImpl<>(List.of(), pageable, 0);
+        }
+        List<LessonDTO> lessons = lessonRepo.search(query, pageable);
+        List<Long> lessonIds = lessons.stream().map(LessonDTO::getId).toList();
         List<LessonThumbDTO> lessonThumbDTOS = lessonRepo.findLessonThumb(lessonIds);
 
         Map<Long,List<Image>> thumbMap = lessonThumbDTOS.stream()
@@ -168,11 +175,11 @@ public class LessonService {
                         LessonThumbDTO::getId,
                         Collectors.mapping(LessonThumbDTO::getThumbnail, Collectors.toList())
                 ));
-        List<LessonDTO> lessonDTOS = lessons.getContent();
-        lessonDTOS.forEach(lessonDTO -> lessonDTO.setThumbnails(
+        lessons.forEach(lessonDTO -> lessonDTO.setThumbnails(
                 thumbMap.getOrDefault(lessonDTO.getId(), List.of())));
-        return new PageImpl<>(lessonMapper.toLessonResponseFroms(lessonDTOS),pageable,lessons.getTotalElements());
+        return new PageImpl<>(lessonMapper.toLessonResponseFroms(lessons),pageable,count);
     }
+
     public ApiResponse<Void> deleteLesson(Long lessonId){
         Lesson lesson = lessonRepo.findByIdAndStatus(lessonId, Status.ACTIVE)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));

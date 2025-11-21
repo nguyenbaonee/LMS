@@ -16,13 +16,6 @@ import java.util.Optional;
 
 public interface StudentRepo extends JpaRepository<Student, Long>, StudentRepoExtend {
     boolean existsByEmail(String email);
-    @Query("""
-    SELECT s.id from Student s
-    WHERE (:name IS NULL OR LOWER(s.name) LIKE :name ESCAPE '\\')
-    AND (:email IS NULL OR s.email = :email)
-    AND s.status = :status
-""")
-    Page<Long> searchIds(Pageable pageable, @Param("name") String name,@Param("email") String email,@Param("status") Status status);
 
     @Query("""
 SELECT new com.example.LMS.dto.dtoProjection.StudentAvatarDTO(s.id, i)
@@ -31,16 +24,6 @@ LEFT JOIN Image i ON i.objectId = s.id AND i.objectType = 'STUDENT' AND i.status
 WHERE s.id IN :ids
 """)
     List<StudentAvatarDTO> findStudentAvatars(@Param("ids") List<Long> ids);
-
-    @Query("""
-SELECT new com.example.LMS.dto.dtoProjection.StudentDTO(
-    s.id, s.name, s.email, s.status
-)
-FROM Student s
-WHERE s.id IN :ids
-AND s.status = 'ACTIVE'
-""")
-    List<StudentDTO> findStudentDTOsByIds(@Param("ids") List<Long> ids);
 
     Optional<Student> findByIdAndStatus(Long id, Status status);
 

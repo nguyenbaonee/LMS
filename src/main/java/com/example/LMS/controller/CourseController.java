@@ -1,8 +1,10 @@
 package com.example.LMS.controller;
 
+import com.example.LMS.dto.Request.CourseQuery;
 import com.example.LMS.dto.Request.CourseRequest;
 import com.example.LMS.dto.Request.CourseUpdate;
 import com.example.LMS.dto.Response.CourseResponse;
+import com.example.LMS.dto.dtoProjection.CourseDTO;
 import com.example.LMS.entity.Course;
 import com.example.LMS.enums.Status;
 import com.example.LMS.repo.CourseRepo;
@@ -31,11 +33,8 @@ public class CourseController {
     }
 
     @GetMapping
-    public Page<CourseResponse> searchCourse(@RequestParam(defaultValue = "0") int page,
-                                             @RequestParam(defaultValue = "10") int size,
-                                             @RequestParam(required = false) String name,
-                                             @RequestParam(required = false) String code) {
-        return courseService.searchCourse(page, size, name, code);
+    public Page<CourseDTO> searchCourse(CourseQuery query) {
+        return courseService.searchCourse(query);
     }
 
     @PutMapping("/{id}")

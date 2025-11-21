@@ -4,6 +4,7 @@ import com.example.LMS.dto.dtoProjection.CourseDTO;
 import com.example.LMS.dto.dtoProjection.CourseImageDTO;
 import com.example.LMS.entity.Course;
 import com.example.LMS.enums.Status;
+import com.example.LMS.repo.extend.CourseRepoExtend;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,17 +14,10 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
-public interface CourseRepo extends JpaRepository<Course, Long> {
+public interface CourseRepo extends JpaRepository<Course, Long>, CourseRepoExtend {
     boolean existsByCode(String code);
 
     //page<long> CourseIds dung dieu kien search
-    @Query("""
-    SELECT c.id from Course c
-    WHERE (:name IS NULL OR LOWER(c.name) LIKE :name ESCAPE '\\')
-    AND (:code IS NULL OR c.code = :code)
-    AND c.status ='ACTIVE'
-""")
-    Page<Long> searchIds(Pageable pageable, @Param("name") String name, @Param("code") String code);
 
     //list cac Course co trong CourseIds
     @Query("""
@@ -36,7 +30,7 @@ WHERE c.id IN :courseIds
 
     @Query("""
 SELECT new com.example.LMS.dto.dtoProjection.CourseDTO(
-    c.id, c.name, c.code, c.description
+    c.id, c.name, c.code, c.description, c.status
 )
 FROM Course c
 WHERE c.id IN :courseIds
