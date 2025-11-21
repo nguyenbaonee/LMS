@@ -24,4 +24,7 @@ public interface StudentMap {
     List<Student> toStudents(List<StudentRequest> studentRequestList);
     List<StudentResponse> toStdResponses(List<Student> students);
     List<StudentResponse> toStdResponseFromDTOs (List<StudentDTO> studentDTOList);
+
+    StudentDTO toDTO(Student student);
+    List<StudentDTO> toDTO(List<Student> students);
 }

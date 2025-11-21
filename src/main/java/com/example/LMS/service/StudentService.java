@@ -2,6 +2,7 @@ package com.example.LMS.service;
 
 import com.example.LMS.Exception.AppException;
 import com.example.LMS.Exception.ErrorCode;
+import com.example.LMS.dto.Request.StudentQuery;
 import com.example.LMS.dto.Request.StudentRequest;
 import com.example.LMS.dto.Request.StudentUpdate;
 import com.example.LMS.dto.Response.StudentResponse;
@@ -15,6 +16,7 @@ import com.example.LMS.enums.Status;
 import com.example.LMS.mapper.StudentMap;
 import com.example.LMS.repo.ImageRepo;
 import com.example.LMS.repo.StudentRepo;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -30,20 +32,13 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class StudentService {
 
-    StudentRepo studentRepo;
-    StudentMap studentMap;
-    FileStorageService fileStorageService;
-    ImageRepo imageRepo;
-
-    public StudentService(StudentRepo studentRepo, StudentMap studentMap,
-                          FileStorageService fileStorageService, ImageRepo imageRepo) {
-        this.studentRepo = studentRepo;
-        this.studentMap = studentMap;
-        this.fileStorageService = fileStorageService;
-        this.imageRepo = imageRepo;
-    }
+    private final StudentRepo studentRepo;
+    private final StudentMap studentMap;
+    private final FileStorageService fileStorageService;
+    private final ImageRepo imageRepo;
 
     @Transactional(rollbackFor = Exception.class)
     public StudentResponse createStd(StudentRequest studentRequest, List<MultipartFile> images)
@@ -87,32 +82,23 @@ public class StudentService {
         }
     }
 
-    public Page<StudentResponse> searchStudent(int page, int size, String name, String email, Status status){
-        if (name != null && !name.isBlank()) {
-            name = "%" + name.replace("\\", "\\\\")
-                    .replace("%", "\\%")
-                    .replace("_", "\\_")
-                    .toLowerCase() + "%";
-        } else {
-            name = null;
-        }
-        Pageable pageable = PageRequest.of(page, size);
-        Page<Long> studentIds = studentRepo.searchIds(pageable, name, email,status);
-        if (studentIds.getTotalElements() == 0) {
+    public Page<StudentDTO> searchStudent(StudentQuery query){
+        Pageable pageable = PageRequest.of(query.getPage(), query.getSize());
+        Long count = studentRepo.count(query);
+        if (count == 0) {
             return new PageImpl<>(List.of(), pageable, 0);
         }
-        List<Long> ids = studentIds.getContent();
+        List<StudentDTO> students = studentRepo.search(query, pageable);
+
+        List<Long> ids = students.stream().map(StudentDTO::getId).collect(Collectors.toList());
         List<StudentAvatarDTO> studentDTOS = studentRepo.findStudentAvatars(ids);
-        List<StudentDTO> studentDTOList = studentRepo.findStudentDTOsByIds(ids);
         Map<Long, List<Image>> studentMapId = studentDTOS.stream()
                 .collect(Collectors.groupingBy(
                         StudentAvatarDTO::getId,
                         Collectors.mapping(StudentAvatarDTO::getImage, Collectors.toList())
                 ));
-        studentDTOList.forEach(studentDTO -> {studentDTO.setAvatar(studentMapId
-                .getOrDefault(studentDTO.getId(), List.of()));});
-        List<StudentResponse> studentResponseList = studentMap.toStdResponseFromDTOs(studentDTOList);
-        return new PageImpl<>(studentResponseList, pageable, studentIds.getTotalElements());
+        students.forEach(student -> student.setAvatar(studentMapId.getOrDefault(student.getId(), List.of())));
+        return new PageImpl<>(students, pageable, count);
     }
 
     @Transactional(rollbackFor = Exception.class)

@@ -1,9 +1,11 @@
 package com.example.LMS.controller;
 
 import com.example.LMS.dto.ApiResponse;
+import com.example.LMS.dto.Request.StudentQuery;
 import com.example.LMS.dto.Request.StudentRequest;
 import com.example.LMS.dto.Request.StudentUpdate;
 import com.example.LMS.dto.Response.StudentResponse;
+import com.example.LMS.dto.dtoProjection.StudentDTO;
 import com.example.LMS.enums.Status;
 import com.example.LMS.service.StudentService;
 import jakarta.validation.Valid;
@@ -33,12 +35,8 @@ public class StudentController {
     }
 
     @GetMapping
-    public Page<StudentResponse> searchStudent(@RequestParam(defaultValue = "0") int page,
-                                               @RequestParam(defaultValue = "10") int size,
-                                               @RequestParam(required = false) String name,
-                                               @RequestParam(required = false) String email,
-                                               @RequestParam(required = false) Status status){
-        return studentService.searchStudent(page,size,name,email,status);
+    public Page<StudentDTO> searchStudent(StudentQuery query){
+        return studentService.searchStudent(query);
     }
 
     @PutMapping("/{id}")
