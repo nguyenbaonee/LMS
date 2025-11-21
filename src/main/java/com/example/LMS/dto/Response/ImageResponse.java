@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ImageResponse {
+    Long id;
     ObjectType objectType;
 
     Long objectId;
@@ -17,4 +18,5 @@ public class ImageResponse {
     String url;
 
     ImageType type;
+    boolean isPrimary = false;
 }

@@ -3,6 +3,7 @@ package com.example.LMS.controller;
 import com.example.LMS.dto.ApiResponse;
 import com.example.LMS.dto.Request.LessonRequest;
 import com.example.LMS.dto.Response.LessonResponse;
+import com.example.LMS.dto.dtoProjection.LessonDTO;
 import com.example.LMS.service.LessonService;
 import jakarta.validation.Valid;
 import org.springframework.context.MessageSource;
@@ -38,7 +39,9 @@ public class LessonController {
                 .build();
     }
     @GetMapping
-    public Page<LessonResponse> getLessonByCourse(int page, int size, Long courseId){
+    public Page<LessonDTO> getLessonByCourse(@RequestParam(defaultValue = "0") int page,
+                                             @RequestParam(defaultValue = "10") int size,
+                                             @RequestParam("courseId") Long courseId){
         return lessonService.getLessonByCourse(page, size, courseId);
     }
     @DeleteMapping("/{lessonId}")

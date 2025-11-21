@@ -9,7 +9,15 @@ import org.hibernate.annotations.Where;
 import java.util.List;
 
 @Entity
-@Table(name = "lessons")
+@Table(
+        name = "lessons",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "UK_course_lesson_order",
+                        columnNames = {"course_id", "lessonOrder"}
+                )
+        }
+)
 @Getter
 @Setter
 @NoArgsConstructor
@@ -22,7 +30,7 @@ public class Lesson {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(cascade = CascadeType.PERSIST,fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id")
     Course course;
 
@@ -30,19 +38,19 @@ public class Lesson {
     String title;
 
     @OneToMany
-    @Column(nullable = false, unique = true)
-    @JoinColumn(name = "objectId", referencedColumnName = "id", insertable = false, updatable = false)
+//    @JoinColumn(name = "objectId", referencedColumnName = "id", insertable = false, updatable = false)
     @Where(clause = "object_type='LESSON' AND type='VIDEO' ")
     List<Image> videoUrl;
 
     @OneToMany
-    @JoinColumn(name = "objectId", referencedColumnName = "id", insertable = false, updatable = false)
+//    @JoinColumn(name = "objectId", referencedColumnName = "id", insertable = false, updatable = false)
     @Where(clause = "object_type='LESSON' AND type='THUMBNAIL' ")
     List<Image> thumbnail;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     Integer lessonOrder;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     Status status = Status.ACTIVE;

@@ -2,6 +2,7 @@ package com.example.LMS.service;
 
 import com.example.LMS.Exception.AppException;
 import com.example.LMS.Exception.ErrorCode;
+import com.example.LMS.dto.ApiResponse;
 import com.example.LMS.dto.Request.CourseRequest;
 import com.example.LMS.dto.Request.CourseUpdate;
 import com.example.LMS.dto.Response.CourseResponse;
@@ -15,6 +16,7 @@ import com.example.LMS.enums.Status;
 import com.example.LMS.mapper.CourseMapper;
 import com.example.LMS.repo.CourseRepo;
 import com.example.LMS.repo.ImageRepo;
+import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -35,13 +37,16 @@ public class CourseService {
     CourseMapper courseMapper;
     FileStorageService fileStorageService;
     ImageRepo imageRepo;
+    MessageSource messageSource;
 
     public CourseService(CourseRepo courseRepo, CourseMapper courseMapper,
-                         FileStorageService fileStorageService, ImageRepo imageRepo) {
+                         FileStorageService fileStorageService, ImageRepo imageRepo,
+                         MessageSource messageSource) {
         this.courseRepo = courseRepo;
         this.courseMapper = courseMapper;
         this.fileStorageService = fileStorageService;
         this.imageRepo = imageRepo;
+        this.messageSource = messageSource;
     }
 
 
@@ -99,7 +104,7 @@ public class CourseService {
         }
         Pageable pageable = PageRequest.of(page, size);
         Page<Long> courseIds = courseRepo.searchIds(pageable, name, code);
-        if (courseIds.isEmpty()) {
+        if (courseIds.getTotalElements() == 0) {
             return new PageImpl<>(List.of(), pageable, 0);
         }
         List<Long> ids = courseIds.getContent();
@@ -110,7 +115,8 @@ public class CourseService {
                         CourseImageDTO::getId,
                         Collectors.mapping(CourseImageDTO::getThumbnail, Collectors.toList())
                 ));
-        courses.forEach(course -> course.setThumbnail(thumbnailsMap.getOrDefault(course.getId(), List.of())));
+        courses.forEach(course -> course.setThumbnail(
+                thumbnailsMap.getOrDefault(course.getId(), List.of())));
         List<CourseResponse> courseResponseList = courseMapper.toResponseFromDTOs(courses);
         return new PageImpl<>(courseResponseList, pageable, courseIds.getTotalElements());
     }
@@ -118,7 +124,7 @@ public class CourseService {
     @Transactional(rollbackFor = Exception.class)
     public CourseResponse updateCourse(Long id, CourseUpdate courseUpdate, List<MultipartFile> images,
                                        List<Long> deleteThumbnailId, Long mainThumbnailId) throws IOException {
-        //check theo Id va Status
+        //check Status
         Course course = courseRepo.findByIdAndStatus(id, Status.ACTIVE)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
 
@@ -199,11 +205,13 @@ public class CourseService {
     }
 
     @Transactional
-    public void deleteCourse(Long id){
+    public ApiResponse<Void> deleteCourse(Long id){
         Course course = courseRepo.findByIdAndStatus(id, Status.ACTIVE)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
         course.setStatus(Status.DELETED);
         courseRepo.save(course);
+        return ApiResponse.<Void>builder()
+                .build();
     }
 
 

@@ -4,6 +4,8 @@ import com.example.LMS.dto.dtoProjection.StudentAvatarDTO;
 import com.example.LMS.dto.dtoProjection.StudentDTO;
 import com.example.LMS.entity.Enrollment;
 import com.example.LMS.enums.Status;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -19,21 +21,20 @@ public interface EnrollmentRepo extends JpaRepository<Enrollment, Long> {
     List<Enrollment> findAllByCourseIdInAndStudentId(List<Long> courseIds, Long studentId);
 
     @Query("""
-SELECT new com.example.LMS.dto.dtoProjection.StudentAvatarDTO(s.id, i)
+SELECT new com.example.LMS.dto.dtoProjection.StudentDTO(s.id, s.name, s.email,s.status)
 FROM Enrollment e
-LEFT JOIN Image i ON i.objectId = e.id AND i.objectType = 'STUDENT' AND i.status = 'ACTIVE'
-LEFT JOIN Student s ON s.id = e.student.id AND s.status = 'ACTIVE'
+JOIN e.student s
 WHERE e.course.id = :courseId
-""")
-    List<StudentAvatarDTO> findStudentAvatars(@Param("courseId") Long courseId);
-
-    @Query("""
-SELECT new com.example.LMS.dto.dtoProjection.StudentDTO(
-    s.id, s.name, s.email
-)
-FROM Student s
-WHERE s.id = :id
 AND s.status = 'ACTIVE'
 """)
-    List<StudentDTO> findStudentDTOsByIds(@Param("id") Long id);
+    Page<StudentDTO> findStudentDTOsByCourseId(@Param("courseId") Long courseId, Pageable pageable);
+
+    @Query("""
+SELECT new com.example.LMS.dto.dtoProjection.StudentAvatarDTO(s.id, i)
+FROM Student s
+LEFT JOIN Image i ON i.objectId = s.id AND i.objectType = 'STUDENT' AND i.status = 'ACTIVE'
+WHERE s.id IN :ids
+""")
+    List<StudentAvatarDTO> findStudentAvatarsByStudentIds(@Param("ids") List<Long> ids);
+
 }

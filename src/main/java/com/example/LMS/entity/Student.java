@@ -29,15 +29,16 @@ public class Student {
     String email;
 
     @OneToMany
-    @JoinColumn(name = "objectId", referencedColumnName = "id", insertable = false, updatable = false)
+//    @JoinColumn(name = "objectId", referencedColumnName = "id", insertable = false, updatable = false)
     @Where(clause = "object_type='STUDENT' AND type='AVATAR'")
     List<Image> avatar;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     Status status = Status.ACTIVE;
 
-    @OneToMany(mappedBy = "student", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "student", cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
     List<Enrollment> enrollments;
 
 }

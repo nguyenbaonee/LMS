@@ -2,10 +2,13 @@ package com.example.LMS.service;
 
 import com.example.LMS.Exception.AppException;
 import com.example.LMS.Exception.ErrorCode;
+import com.example.LMS.dto.ApiResponse;
 import com.example.LMS.dto.Request.EnrollmentRequest;
 import com.example.LMS.dto.Request.EnrollmentUpdate;
 import com.example.LMS.dto.Response.EnrollmentResponse;
 import com.example.LMS.dto.Response.StudentResponse;
+import com.example.LMS.dto.dtoProjection.CourseDTO;
+import com.example.LMS.dto.dtoProjection.CourseImageDTO;
 import com.example.LMS.dto.dtoProjection.StudentAvatarDTO;
 import com.example.LMS.dto.dtoProjection.StudentDTO;
 import com.example.LMS.entity.Course;
@@ -13,11 +16,13 @@ import com.example.LMS.entity.Enrollment;
 import com.example.LMS.entity.Image;
 import com.example.LMS.entity.Student;
 import com.example.LMS.enums.Status;
+import com.example.LMS.mapper.CourseMapper;
 import com.example.LMS.mapper.EnrollmentMapper;
 import com.example.LMS.mapper.StudentMap;
 import com.example.LMS.repo.CourseRepo;
 import com.example.LMS.repo.EnrollmentRepo;
 import com.example.LMS.repo.StudentRepo;
+import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -39,15 +44,20 @@ public class EnrollmentService {
     StudentRepo studentRepo;
     CourseRepo courseRepo;
     StudentMap studentMap;
+    MessageSource messageSource;
+    CourseMapper courseMapper;
 
     public EnrollmentService(EnrollmentRepo enrollmentRepo, EnrollmentMapper enrollmentMapper,
                              StudentRepo studentRepo, CourseRepo courseRepo,
-                             StudentMap studentMap) {
+                             StudentMap studentMap, MessageSource messageSource,
+                             CourseMapper courseMapper) {
         this.enrollmentRepo = enrollmentRepo;
         this.enrollmentMapper = enrollmentMapper;
         this.studentRepo = studentRepo;
         this.courseRepo = courseRepo;
         this.studentMap = studentMap;
+        this.messageSource = messageSource;
+        this.courseMapper = courseMapper;
     }
     @Transactional(rollbackFor = Exception.class)
     public List<EnrollmentResponse> createEnrollment(EnrollmentRequest enrollmentRequest){
@@ -56,25 +66,32 @@ public class EnrollmentService {
         List<Enrollment> enrollmentList = new ArrayList<>();
 
         //check courseId request ton tai khong
-        List<Course> courses = courseRepo.findAllByIdInAndStatus(enrollmentRequest.getCourseIds(), Status.ACTIVE);
-        if(courses.size()!= enrollmentRequest.getCourseIds().size()){
+        List<CourseImageDTO> coursesImg = courseRepo.findCoursesWithActiveThumbnails(enrollmentRequest.getCourseIds());
+        List<CourseDTO> courses = courseRepo.findCourseDTOsByIds(enrollmentRequest.getCourseIds());
+        if(courses.size() != enrollmentRequest.getCourseIds().size()){
             throw new AppException(ErrorCode.COURSE_NOT_FOUND);
         }
-        Map<Long, Course> courseMap = courses.stream()
-                .collect(Collectors.toMap(Course::getId, c -> c));
+        Map<Long, List<Image>> thumbnailsMap = coursesImg.stream()
+                .collect(Collectors.groupingBy(
+                        CourseImageDTO::getId,
+                        Collectors.mapping(CourseImageDTO::getThumbnail, Collectors.toList())
+                ));
+        courses.forEach(course -> course.setThumbnail(
+                thumbnailsMap.getOrDefault(course.getId(), List.of())));
+        List<Course> courseList = courseMapper.toCourseFromDTOs(courses);
 
         List<Enrollment> enrollments = enrollmentRepo.findAllByCourseIdInAndStudentId(enrollmentRequest.getCourseIds(),enrollmentRequest.getStudentId());
         if(enrollments != null && !enrollments.isEmpty()){
             throw new AppException(ErrorCode.ENROLLMENT_EXISTS);
         }
-        for(Long courseId : enrollmentRequest.getCourseIds()){
+        Boolean a = (enrollmentRequest.getCourseIds().size() == courses.size());
+        courseList.forEach(course -> {
             Enrollment enrollment = Enrollment.builder()
-                    .student(student)
-                    .course(courseMap.get(courseId))
-                    .enrolledAt(LocalDateTime.now())
-                    .build();
-            enrollmentList.add(enrollment);
-        }
+                .student(student)
+                .course(course)
+                .enrolledAt(LocalDateTime.now())
+                .build();
+            enrollmentList.add(enrollment);});
         enrollmentRepo.saveAll(enrollmentList);
         return enrollmentMapper.toEnrollmentResponses(enrollmentList);
     }
@@ -132,31 +149,43 @@ public class EnrollmentService {
                 );
             }
             enrollmentRepo.saveAll(toSave);
-
         }
     }
     public Page<StudentResponse> getStudentsOfCourse(int page, int size, Long courseId) {
-        if(!courseRepo.existsByIdAndStatus(courseId, Status.ACTIVE)){
+        if (!courseRepo.existsByIdAndStatus(courseId, Status.ACTIVE)) {
             throw new AppException(ErrorCode.COURSE_NOT_FOUND);
         }
+
         Pageable pageable = PageRequest.of(page, size);
-        //dto tung student-imag
-        List<StudentAvatarDTO> studentAvatarDTOS = enrollmentRepo.findStudentAvatars(courseId);
-        //map id-list<image>
-        Map<Long, List<Image>> studentsMap = studentAvatarDTOS.stream()
-                .collect(Collectors.groupingBy(StudentAvatarDTO::getId, Collectors.mapping(StudentAvatarDTO::getImage,
-                        Collectors.toList())));
-        List<StudentDTO> studentDTOList = enrollmentRepo.findStudentDTOsByIds(courseId);
-        studentDTOList.forEach(studentDTO -> {studentDTO
-                .setAvatar(studentsMap.getOrDefault(studentDTO.getId(), List.of()));});
-        List<StudentResponse> studentResponseList = studentMap.toStdResponseFromDTOs(studentDTOList);
-        return new PageImpl<>(studentResponseList, pageable, studentResponseList.size());
+
+        Page<StudentDTO> studentDTOPage = enrollmentRepo.findStudentDTOsByCourseId(courseId, pageable);
+
+        List<Long> studentIds = studentDTOPage.getContent().stream()
+                .map(StudentDTO::getId)
+                .collect(Collectors.toList());
+
+        List<StudentAvatarDTO> avatars = enrollmentRepo.findStudentAvatarsByStudentIds(studentIds);
+
+        Map<Long, List<Image>> avatarMap = avatars.stream()
+                .collect(Collectors.groupingBy(
+                        StudentAvatarDTO::getId,
+                        Collectors.mapping(StudentAvatarDTO::getImage, Collectors.toList())
+                ));
+
+        studentDTOPage.getContent().forEach(s -> s.setAvatar(avatarMap.getOrDefault(s.getId(), List.of())));
+
+        List<StudentResponse> studentResponseList = studentMap.toStdResponseFromDTOs(studentDTOPage.getContent());
+
+        return new PageImpl<>(studentResponseList, pageable, studentDTOPage.getTotalElements());
     }
+
     @Transactional
-    public void deleteEnrollment(Long enrollmentId) {
+    public ApiResponse<Void> deleteEnrollment(Long enrollmentId) {
         Enrollment enrollment = enrollmentRepo.findByIdAndStatus(enrollmentId, Status.ACTIVE)
                         .orElseThrow(() -> new AppException(ErrorCode.ENROLLMENT_NOT_FOUND));
         enrollmentRepo.delete(enrollment);
+        return ApiResponse.<Void>builder()
+                .build();
     }
 
 }

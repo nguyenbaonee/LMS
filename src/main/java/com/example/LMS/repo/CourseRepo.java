@@ -15,6 +15,8 @@ import java.util.Optional;
 
 public interface CourseRepo extends JpaRepository<Course, Long> {
     boolean existsByCode(String code);
+
+    //page<long> CourseIds dung dieu kien search
     @Query("""
     SELECT c.id from Course c
     WHERE (:name IS NULL OR LOWER(c.name) LIKE :name ESCAPE '\\')
@@ -23,6 +25,7 @@ public interface CourseRepo extends JpaRepository<Course, Long> {
 """)
     Page<Long> searchIds(Pageable pageable, @Param("name") String name, @Param("code") String code);
 
+    //list cac Course co trong CourseIds
     @Query("""
 SELECT new com.example.LMS.dto.dtoProjection.CourseImageDTO(c.id,i)
 FROM Course c
@@ -44,15 +47,6 @@ AND c.status = 'ACTIVE'
     Optional<Course> findByIdAndStatus(Long id, Status status);
     boolean existsByIdAndStatus(Long id, Status status);
 
-    @Query("SELECT c.name FROM Course c WHERE c.id = :id")
-    String findNameById(@Param("id") Long id);
 
-    @Query("SELECT c.description FROM Course c WHERE c.id = :id")
-    String findDescriptionById(@Param("id") Long id);
-
-    @Query("SELECT c.code FROM Course c WHERE c.id = :id")
-    String findCodeById(@Param("id") Long id);
-
-    List<Course> findAllByIdInAndStatus(List<Long> ids, Status status);
-
+    List<Course> findAllByIdInAndStatus(List<Long> courseIds, Status status);
 }

@@ -13,11 +13,11 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class StudentUpdate {
-    @NotBlank(message = "valid.name.notnull") @Length(min = 5, max = 20, message = "valid.name.length")
+    @NotBlank(message = "{valid.name.notnull}") @Length(min = 5, max = 20, message = "{valid.name.length}")
     String name;
 
-    @NotBlank(message = "valid.mail.notnull") @Email(message = "valid.mail.invalid")
-    @Length( min=5, max = 100, message = "valid.mail.length")
+    @NotBlank(message = "{valid.mail.notnull}") @Email(message = "{valid.mail.invalid}")
+    @Length( min=5, max = 100, message = "{valid.mail.length}")
     String email;
 
 }

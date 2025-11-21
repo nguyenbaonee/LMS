@@ -3,6 +3,7 @@ package com.example.LMS.dto;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.springframework.context.MessageSource;
 
 @Data
 @Builder
@@ -11,7 +12,12 @@ import lombok.experimental.FieldDefaults;
 @NoArgsConstructor
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiResponse<T>{
+    MessageSource messageSource;
+    public ApiResponse(MessageSource messageSource) {
+        this.messageSource = messageSource;
+    }
     int code;
-    String message;
+    @Builder.Default
+    String message = "response.delete.success";
     T data;
 }

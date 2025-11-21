@@ -25,7 +25,7 @@ public class Image {
     boolean isPrimary = false;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
+    @Column(name = "object_type",nullable = false, length = 20)
     ObjectType objectType;
 
     @Column(nullable = false)
@@ -38,6 +38,7 @@ public class Image {
     @Column(nullable = false, length = 20)
     ImageType type = ImageType.IMAGE;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     Status status = Status.ACTIVE;

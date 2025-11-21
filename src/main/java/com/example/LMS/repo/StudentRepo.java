@@ -1,6 +1,5 @@
 package com.example.LMS.repo;
 
-import com.example.LMS.dto.dtoProjection.CourseDTO;
 import com.example.LMS.dto.dtoProjection.StudentAvatarDTO;
 import com.example.LMS.dto.dtoProjection.StudentDTO;
 import com.example.LMS.entity.Student;
@@ -20,9 +19,9 @@ public interface StudentRepo extends JpaRepository<Student, Long> {
     SELECT s.id from Student s
     WHERE (:name IS NULL OR LOWER(s.name) LIKE :name ESCAPE '\\')
     AND (:email IS NULL OR s.email = :email)
-    AND s.status ='ACTIVE'
+    AND s.status = :status
 """)
-    Page<Long> searchIds(Pageable pageable, @Param("name") String name,@Param("email") String email);
+    Page<Long> searchIds(Pageable pageable, @Param("name") String name,@Param("email") String email,@Param("status") Status status);
 
     @Query("""
 SELECT new com.example.LMS.dto.dtoProjection.StudentAvatarDTO(s.id, i)
@@ -34,7 +33,7 @@ WHERE s.id IN :ids
 
     @Query("""
 SELECT new com.example.LMS.dto.dtoProjection.StudentDTO(
-    s.id, s.name, s.email
+    s.id, s.name, s.email, s.status
 )
 FROM Student s
 WHERE s.id IN :ids
@@ -44,9 +43,4 @@ AND s.status = 'ACTIVE'
 
     Optional<Student> findByIdAndStatus(Long id, Status status);
 
-    @Query("SELECT s.name FROM Student s WHERE s.id = :id")
-    String findNameById(@Param("id") Long id);
-
-    @Query("SELECT s.email FROM Student s WHERE s.id = :id")
-    String findEmailById(@Param("id") Long id);
 }

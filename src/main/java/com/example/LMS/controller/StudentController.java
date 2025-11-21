@@ -1,10 +1,13 @@
 package com.example.LMS.controller;
 
+import com.example.LMS.dto.ApiResponse;
 import com.example.LMS.dto.Request.StudentRequest;
 import com.example.LMS.dto.Request.StudentUpdate;
 import com.example.LMS.dto.Response.StudentResponse;
+import com.example.LMS.enums.Status;
 import com.example.LMS.service.StudentService;
 import jakarta.validation.Valid;
+import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -18,8 +21,10 @@ import java.util.List;
 @RequestMapping("/api/students")
 public class StudentController {
     StudentService studentService;
-    public StudentController(StudentService studentService){
+    MessageSource messageSource;
+    public StudentController(StudentService studentService, MessageSource messageSource) {
         this.studentService = studentService;
+        this.messageSource = messageSource;
     }
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public StudentResponse createStd(@Valid @ModelAttribute StudentRequest studentRequest,
@@ -31,8 +36,9 @@ public class StudentController {
     public Page<StudentResponse> searchStudent(@RequestParam(defaultValue = "0") int page,
                                                @RequestParam(defaultValue = "10") int size,
                                                @RequestParam(required = false) String name,
-                                               @RequestParam(required = false) String email){
-        return studentService.searchStudent(page,size,name,email);
+                                               @RequestParam(required = false) String email,
+                                               @RequestParam(required = false) Status status){
+        return studentService.searchStudent(page,size,name,email,status);
     }
 
     @PutMapping("/{id}")
@@ -44,7 +50,9 @@ public class StudentController {
     }
 
     @DeleteMapping("/{id}")
-    public void deleteStd(@PathVariable Long id){
+    public ApiResponse<Void> deleteStd(@PathVariable Long id){
         studentService.deleteStudent(id);
+        return ApiResponse.<Void>builder()
+                .build();
     }
 }

@@ -87,7 +87,7 @@ public class StudentService {
         }
     }
 
-    public Page<StudentResponse> searchStudent(int page, int size, String name, String email){
+    public Page<StudentResponse> searchStudent(int page, int size, String name, String email, Status status){
         if (name != null && !name.isBlank()) {
             name = "%" + name.replace("\\", "\\\\")
                     .replace("%", "\\%")
@@ -97,8 +97,8 @@ public class StudentService {
             name = null;
         }
         Pageable pageable = PageRequest.of(page, size);
-        Page<Long> studentIds = studentRepo.searchIds(pageable, name, email);
-        if (studentIds.isEmpty()) {
+        Page<Long> studentIds = studentRepo.searchIds(pageable, name, email,status);
+        if (studentIds.getTotalElements() == 0) {
             return new PageImpl<>(List.of(), pageable, 0);
         }
         List<Long> ids = studentIds.getContent();
@@ -121,7 +121,9 @@ public class StudentService {
         //check theo id va Status
         Student student = studentRepo.findByIdAndStatus(id, Status.ACTIVE)
                 .orElseThrow(() -> new AppException(ErrorCode.STUDENTNOTFOUND));
-
+        if(studentRepo.existsByEmail(studentUpdate.getEmail()) && !studentUpdate.getEmail().equals(student.getEmail())){
+            throw new AppException(ErrorCode.EMAILEXISTS);
+        }
         studentMap.updateStudent(studentUpdate, student);
 
         //Xoa mem cac anh co trong list xoa
@@ -161,7 +163,6 @@ public class StudentService {
             List<Image> avatarActive = student.getAvatar().stream()
                     .filter(img -> img.getStatus() == Status.ACTIVE)
                     .toList();
-
             //xu ly avatar hien thi
             if(mainAvatarId != null){
                 boolean exists = avatarActive.stream()
@@ -174,8 +175,12 @@ public class StudentService {
                     img.setPrimary(img.getId().equals(mainAvatarId));
                 }
             } else if(!avatarActive.isEmpty()){
-                avatarActive.forEach(img -> img.setPrimary(false));
-                avatarActive.get(0).setPrimary(true);
+                boolean hasPrimary = avatarActive.stream()
+                        .anyMatch(Image::isPrimary);
+                if(!hasPrimary){
+                    avatarActive.forEach(img -> img.setPrimary(false));
+                    avatarActive.get(0).setPrimary(true);
+                }
             }
             return studentMap.toStdResponse(student);
         }

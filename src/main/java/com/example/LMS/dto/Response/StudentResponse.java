@@ -1,5 +1,6 @@
 package com.example.LMS.dto.Response;
 
+import com.example.LMS.enums.Status;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,5 +18,7 @@ public class StudentResponse {
     String email;
 
     List<ImageResponse> avatar;
+
+    Status status;
 
 }

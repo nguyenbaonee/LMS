@@ -31,6 +31,7 @@ public class Enrollment {
     @JoinColumn(name = "course_id")
     Course course;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     Status status = Status.ACTIVE;

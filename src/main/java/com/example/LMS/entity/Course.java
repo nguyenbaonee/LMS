@@ -29,22 +29,23 @@ public class Course {
     String code;
 
     @OneToMany
-    @JoinColumn(name = "objectId", referencedColumnName = "id", insertable = false, updatable = false)
+//    @JoinColumn(name = "objectId", referencedColumnName = "id", insertable = false, updatable = false)
     @Where(clause = "object_type='COURSE' AND type='THUMBNAIL' ")
     List<Image> thumbnail;
 
     @Column(columnDefinition = "TEXT")
     String description;
 
+    @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     Status status = Status.ACTIVE;
 
 
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "course", cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
     List<Lesson> lessons;
 
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "course", cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
     List<Enrollment> enrollments;
 
 }

@@ -3,6 +3,9 @@ package com.example.LMS.controller;
 import com.example.LMS.dto.Request.CourseRequest;
 import com.example.LMS.dto.Request.CourseUpdate;
 import com.example.LMS.dto.Response.CourseResponse;
+import com.example.LMS.entity.Course;
+import com.example.LMS.enums.Status;
+import com.example.LMS.repo.CourseRepo;
 import com.example.LMS.service.CourseService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -23,7 +26,7 @@ public class CourseController {
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public CourseResponse createCourse(@Valid @ModelAttribute CourseRequest courseRequest,
-                                       @RequestParam(value = "image", required = false) List<MultipartFile> images) throws IOException {
+                                       @RequestParam(value = "images", required = false) List<MultipartFile> images) throws IOException {
         return courseService.createCourse(courseRequest,images);
     }
 
@@ -37,9 +40,9 @@ public class CourseController {
 
     @PutMapping("/{id}")
     public CourseResponse updateCourse(@PathVariable Long id,@Valid @ModelAttribute CourseUpdate courseUpdate,
-                                       @RequestParam("images") List<MultipartFile> images,
-                                       @RequestParam("deleteThumbnailId") List<Long> deleteThumbnailId,
-                                       @RequestParam("mainThumbnailId") Long mainThumbnailId) throws IOException{
+                                       @RequestParam(value = "images", required = false) List<MultipartFile> images,
+                                       @RequestParam(value = "deleteThumbnailId", required = false) List<Long> deleteThumbnailId,
+                                       @RequestParam(value = "mainThumbnailId", required = false) Long mainThumbnailId) throws IOException{
         return courseService.updateCourse(id,courseUpdate,images,deleteThumbnailId,mainThumbnailId);
     }
 
@@ -47,4 +50,5 @@ public class CourseController {
     public void deleteCourse(@PathVariable Long id) {
         courseService.deleteCourse(id);
     }
+
 }

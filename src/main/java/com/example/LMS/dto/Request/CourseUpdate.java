@@ -10,8 +10,8 @@ import org.hibernate.validator.constraints.Length;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CourseUpdate {
-    @NotBlank(message = "valid.notBlank")
-    @Length(min = 1, max = 150, message = "valid.course.length")
+    @NotBlank(message = "{valid.notBlank}")
+    @Length(min = 1, max = 150, message = "{valid.course.length}")
     String name;
 
     String description;

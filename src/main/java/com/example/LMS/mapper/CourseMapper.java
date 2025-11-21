@@ -16,10 +16,12 @@ import java.util.List;
 @Mapper(componentModel = "spring", uses = {ImageMapper.class, EnrollmentMapper.class})
 public interface CourseMapper {
     Course toCourse(CourseRequest courseRequest);
+    Course toCourseFromDTO(CourseDTO courseDTO);
     CourseResponse toCourseResponse(Course course);
     CourseResponse toResponseFromDTO(CourseDTO courseDTO);
 
     List<Course> toCourses(List<CourseRequest> courseRequests);
+    List<Course> toCourseFromDTOs(List<CourseDTO> courseDTOs);
     List<CourseResponse> toCourseResponses(List<Course> courses);
     List<CourseResponse> toResponseFromDTOs(List<CourseDTO> courseDTOs);
 

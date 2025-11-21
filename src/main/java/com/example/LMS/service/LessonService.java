@@ -2,8 +2,11 @@ package com.example.LMS.service;
 
 import com.example.LMS.Exception.AppException;
 import com.example.LMS.Exception.ErrorCode;
+import com.example.LMS.dto.ApiResponse;
 import com.example.LMS.dto.Request.LessonRequest;
 import com.example.LMS.dto.Response.LessonResponse;
+import com.example.LMS.dto.dtoProjection.LessonDTO;
+import com.example.LMS.dto.dtoProjection.LessonThumbDTO;
 import com.example.LMS.entity.Course;
 import com.example.LMS.entity.Image;
 import com.example.LMS.entity.Lesson;
@@ -14,7 +17,9 @@ import com.example.LMS.mapper.LessonMapper;
 import com.example.LMS.repo.CourseRepo;
 import com.example.LMS.repo.ImageRepo;
 import com.example.LMS.repo.LessonRepo;
+import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,6 +29,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class LessonService {
@@ -33,87 +40,103 @@ public class LessonService {
     CourseRepo courseRepo;
     FileStorageService fileStorageService;
     ImageRepo imageRepo;
+    MessageSource messageSource;
 
     public LessonService(LessonRepo lessonRepo, LessonMapper lessonMapper,
                          CourseRepo courseRepo, FileStorageService fileStorageService,
-                         ImageRepo imageRepo) {
+                         ImageRepo imageRepo, MessageSource messageSource) {
         this.lessonRepo = lessonRepo;
         this.lessonMapper = lessonMapper;
         this.courseRepo = courseRepo;
         this.fileStorageService = fileStorageService;
         this.imageRepo = imageRepo;
+        this.messageSource = messageSource;
     }
 
     @Transactional(rollbackFor = Exception.class)
-    public LessonResponse createLesson(Long courseId, LessonRequest lessonRequest, List<MultipartFile> images, List<MultipartFile> videos) throws IOException {
+    public LessonResponse createLesson(
+            Long courseId,
+            LessonRequest lessonRequest,
+            List<MultipartFile> images,
+            List<MultipartFile> videos) throws IOException {
 
         Course course = courseRepo.findByIdAndStatus(courseId, Status.ACTIVE)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
 
-        Lesson lesson = lessonMapper.toLesson(lessonRequest);
-        lessonRepo.save(lesson);
-
-        if(videos == null || videos.isEmpty()){
+        if (videos == null || videos.isEmpty()) {
             throw new AppException(ErrorCode.VIDEO_NOT_EMPTY);
         }
-        List<Image> videoList = new ArrayList<>();
+
         List<String> videoPaths = new ArrayList<>();
-
-        List<Image> imgList = new ArrayList<>();
         List<String> imgPaths = new ArrayList<>();
+
         try {
-            if (videos != null && !videos.isEmpty()) {
 
-                List<Lesson> lessons = lessonRepo.findByCourseIdAndStatusOrderByLessonOrder(courseId, Status.ACTIVE);
-                for(Lesson l : lessons){
-                    if(l.getLessonOrder() >= lessonRequest.getLessonOrder()){
-                        l.setLessonOrder(l.getLessonOrder() + 1);
-                    }
+            List<Lesson> lessons = lessonRepo.findByCourseIdAndStatusOrderByLessonOrder(courseId, Status.ACTIVE);
+            for (Lesson l : lessons) {
+                if (l.getLessonOrder() >= lessonRequest.getLessonOrder()) {
+                    l.setLessonOrder(l.getLessonOrder() + 1);
                 }
-                lessonRepo.saveAll(lessons);
+            }
+            lessonRepo.saveAll(lessons);
+            lessonRepo.flush();
 
-                for (MultipartFile file : videos) {
-                    String url = fileStorageService.save(file, ObjectType.LESSON, ImageType.VIDEO);
-                    Image video = new Image();
-                    video.setUrl(url);
-                    video.setObjectType(ObjectType.LESSON);
-                    video.setType(ImageType.VIDEO);
-                    video.setObjectId(lesson.getId());
-                    videoList.add(video);
-                    videoPaths.add(url);
+            Lesson lesson = lessonMapper.toLesson(lessonRequest);
+            lesson.setCourse(course);
+            lessonRepo.save(lesson);
+
+
+            List<Image> videoList = new ArrayList<>();
+            for (MultipartFile file : videos) {
+                String url = fileStorageService.save(file, ObjectType.LESSON, ImageType.VIDEO);
+                videoPaths.add(url);
+
+                Image video = new Image();
+                video.setUrl(url);
+                video.setObjectType(ObjectType.LESSON);
+                video.setType(ImageType.VIDEO);
+                video.setObjectId(lesson.getId());
+                videoList.add(video);
+            }
+            imageRepo.saveAll(videoList);
+            lesson.setVideoUrl(videoList);
+
+
+            if (images != null && !images.isEmpty()) {
+                List<Image> imgList = new ArrayList<>();
+                boolean primary = true;
+
+                for (MultipartFile file : images) {
+                    String url = fileStorageService.save(file, ObjectType.LESSON, ImageType.THUMBNAIL);
+                    imgPaths.add(url);
+
+                    Image img = new Image();
+                    img.setUrl(url);
+                    img.setPrimary(primary);
+                    primary = false;
+                    img.setObjectType(ObjectType.LESSON);
+                    img.setType(ImageType.THUMBNAIL);
+                    img.setObjectId(lesson.getId());
+
+                    imgList.add(img);
                 }
-                imageRepo.saveAll(videoList);
-                lesson.setVideoUrl(videoList);
-                lessonRepo.save(lesson);
-            }
-            if (images == null || images.isEmpty()) {
-            return lessonMapper.toLessonResponse(lesson);
-        }
-            boolean thumbnailMain = true;
 
-            for (MultipartFile file : images) {
-                String url = fileStorageService.save(file, ObjectType.LESSON, ImageType.THUMBNAIL);
-                Image img = new Image();
-                img.setUrl(url);
-                img.setPrimary(thumbnailMain);
-                thumbnailMain = false;
-                img.setObjectType(ObjectType.LESSON);
-                img.setType(ImageType.THUMBNAIL);
-                img.setObjectId(lesson.getId());
-
-                imgList.add(img);
-                imgPaths.add(url);
+                imageRepo.saveAll(imgList);
+                lesson.setThumbnail(imgList);
             }
-            imageRepo.saveAll(imgList);
-            lesson.setThumbnail(imgList);
+
             lessonRepo.save(lesson);
             return lessonMapper.toLessonResponse(lesson);
-        } catch (Exception e) {
+
+        } catch (Exception ex) {
+
+            fileStorageService.deleteFiles(videoPaths);
             fileStorageService.deleteFiles(imgPaths);
-            fileStorageService.deleteFiles(imgPaths);
-            throw e;
+
+            throw ex;
         }
     }
+
     public LessonResponse updateLesson(Long lessonId, LessonRequest lessonRequest, List<MultipartFile> images, List<MultipartFile> videos,
                                        List<Long> deleteThumbnailId, Long mainThumbnailId,
                                        List<Long> deleteVideos) throws IOException {
@@ -131,18 +154,31 @@ public class LessonService {
 
         return null;
     }
-    public Page<LessonResponse> getLessonByCourse(int page, int size, Long courseId){
+    public Page<LessonDTO> getLessonByCourse(int page, int size, Long courseId){
         if(!courseRepo.existsByIdAndStatus(courseId, Status.ACTIVE)){
             throw new AppException(ErrorCode.COURSE_NOT_FOUND);
         }
         Pageable pageable = PageRequest.of(page, size);
-        Page<Lesson> lessons = lessonRepo.findByCourseId(courseId,pageable);
-        return lessons.map(lesson -> lessonMapper.toLessonResponse(lesson));
+        Page<LessonDTO> lessons = lessonRepo.findByCourseId(courseId,pageable);
+        List<Long> lessonIds = lessons.getContent().stream().map(LessonDTO::getId).toList();
+        List<LessonThumbDTO> lessonThumbDTOS = lessonRepo.findLessonThumb(lessonIds);
+
+        Map<Long,List<Image>> thumbMap = lessonThumbDTOS.stream()
+                .collect(Collectors.groupingBy(
+                        LessonThumbDTO::getId,
+                        Collectors.mapping(LessonThumbDTO::getThumbnail, Collectors.toList())
+                ));
+        List<LessonDTO> lessonDTOS = lessons.getContent();
+        lessonDTOS.forEach(lessonDTO -> lessonDTO.setThumbnails(
+                thumbMap.getOrDefault(lessonDTO.getId(), List.of())));
+        return new PageImpl<>(lessonMapper.toLessonResponseFroms(lessonDTOS),pageable,lessons.getTotalElements());
     }
-    public void deleteLesson(Long lessonId){
+    public ApiResponse<Void> deleteLesson(Long lessonId){
         Lesson lesson = lessonRepo.findByIdAndStatus(lessonId, Status.ACTIVE)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
         lesson.setStatus(Status.DELETED);
         lessonRepo.save(lesson);
+        return ApiResponse.<Void>builder()
+                .build();
     }
 }
