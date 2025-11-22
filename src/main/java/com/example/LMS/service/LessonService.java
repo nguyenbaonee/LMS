@@ -157,12 +157,12 @@ public class LessonService {
 
         return null;
     }
-    public Page<LessonDTO> getLessonByCourse(int page, int size, Long courseId){
+    public Page<LessonDTO> getLessonByCourse(int page, int size, Long courseId, Status status){
         if(!courseRepo.existsByIdAndStatus(courseId, Status.ACTIVE)){
             throw new AppException(ErrorCode.COURSE_NOT_FOUND);
         }
         Pageable pageable = PageRequest.of(page, size);
-        Page<LessonDTO> lessons = lessonRepo.findByCourseId(courseId,pageable);
+        Page<LessonDTO> lessons = lessonRepo.findByCourseId(courseId,pageable, status);
         List<Long> lessonIds = lessons.getContent().stream().map(LessonDTO::getId).toList();
         List<LessonThumbDTO> lessonThumbDTOS = lessonRepo.findLessonThumb(lessonIds);
 

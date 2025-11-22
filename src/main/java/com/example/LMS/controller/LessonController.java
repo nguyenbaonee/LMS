@@ -4,6 +4,7 @@ import com.example.LMS.dto.ApiResponse;
 import com.example.LMS.dto.Request.LessonRequest;
 import com.example.LMS.dto.Response.LessonResponse;
 import com.example.LMS.dto.dtoProjection.LessonDTO;
+import com.example.LMS.enums.Status;
 import com.example.LMS.service.LessonService;
 import jakarta.validation.Valid;
 import org.springframework.context.MessageSource;
@@ -39,10 +40,16 @@ public class LessonController {
                 .build();
     }
     @GetMapping
-    public Page<LessonDTO> getLessonByCourse(@RequestParam(defaultValue = "0") int page,
+    public ApiResponse<Page<LessonDTO>> getLessonByCourse(@RequestParam(defaultValue = "0") int page,
                                              @RequestParam(defaultValue = "10") int size,
-                                             @RequestParam("courseId") Long courseId){
-        return lessonService.getLessonByCourse(page, size, courseId);
+                                             @RequestParam("courseId") Long courseId,
+                                             @RequestParam(defaultValue = "ACTIVE") Status status){
+        Locale locale = LocaleContextHolder.getLocale();
+        return ApiResponse.<Page<LessonDTO>>builder()
+                .code(HttpStatus.OK.value())
+                .message(messageSource.getMessage("response.success", null, locale))
+                .data(lessonService.getLessonByCourse(page, size, courseId,status))
+                .build();
     }
     @DeleteMapping("/{lessonId}")
     public void deleteLesson(@PathVariable Long lessonId){

@@ -17,11 +17,11 @@ public interface LessonRepo extends JpaRepository<Lesson, Long> {
     List<Lesson> findByCourseIdAndStatusOrderByLessonOrder(Long courseId, Status status);
 
     @Query("""
-SELECT new com.example.LMS.dto.dtoProjection.LessonDTO(l.id,l.title,l.lessonOrder)
+SELECT new com.example.LMS.dto.dtoProjection.LessonDTO(l.id,l.title,l.lessonOrder,l.status)
 FROM Lesson l
-WHERE l.course.id = :courseId AND l.status = 'ACTIVE'
+WHERE l.course.id = :courseId AND l.status = :status
 """)
-    Page<LessonDTO> findByCourseId(Long courseId, Pageable pageable);
+    Page<LessonDTO> findByCourseId(Long courseId, Pageable pageable,Status status);
 
     @Query("""
 SELECT new com.example.LMS.dto.dtoProjection.LessonThumbDTO(l.id, i)
