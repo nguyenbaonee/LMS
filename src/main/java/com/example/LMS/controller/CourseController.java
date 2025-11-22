@@ -1,14 +1,13 @@
 package com.example.LMS.controller;
 
+import com.example.LMS.dto.ApiResponse;
 import com.example.LMS.dto.Request.CourseQuery;
 import com.example.LMS.dto.Request.CourseRequest;
 import com.example.LMS.dto.Request.CourseUpdate;
 import com.example.LMS.dto.Response.CourseResponse;
 import com.example.LMS.dto.dtoProjection.CourseDTO;
-import com.example.LMS.entity.Course;
-import com.example.LMS.enums.Status;
-import com.example.LMS.repo.CourseRepo;
 import com.example.LMS.service.CourseService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
@@ -27,14 +26,19 @@ public class CourseController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public CourseResponse createCourse(@Valid @ModelAttribute CourseRequest courseRequest,
+    public ApiResponse<CourseResponse> createCourse(@Valid @ModelAttribute CourseRequest courseRequest,
                                        @RequestParam(value = "images", required = false) List<MultipartFile> images) throws IOException {
-        return courseService.createCourse(courseRequest,images);
+        return ApiResponse.of(courseService.createCourse(courseRequest,images));
+    }
+
+    @GetMapping("/export")
+    public void exportCourse(HttpServletResponse response, CourseQuery query) {
+        courseService.exportCourse(response, query);
     }
 
     @GetMapping
-    public Page<CourseDTO> searchCourse(CourseQuery query) {
-        return courseService.searchCourse(query);
+    public ApiResponse<Page<CourseDTO>> searchCourse(CourseQuery query) {
+        return ApiResponse.of(courseService.searchCourse(query));
     }
 
     @PutMapping("/{id}")
@@ -46,8 +50,9 @@ public class CourseController {
     }
 
     @DeleteMapping("/{id}")
-    public void deleteCourse(@PathVariable Long id) {
+    public ApiResponse<Void> deleteCourse(@PathVariable Long id) {
         courseService.deleteCourse(id);
+        return ApiResponse.ok();
     }
 
 }

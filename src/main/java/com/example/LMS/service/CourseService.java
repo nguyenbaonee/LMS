@@ -17,8 +17,12 @@ import com.example.LMS.enums.Status;
 import com.example.LMS.mapper.CourseMapper;
 import com.example.LMS.repo.CourseRepo;
 import com.example.LMS.repo.ImageRepo;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.jxls.common.Context;
+import org.jxls.util.JxlsHelper;
 import org.springframework.context.MessageSource;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -28,6 +32,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -200,4 +208,32 @@ public class CourseService {
     }
 
 
+    public void exportCourse(HttpServletResponse response, CourseQuery query) {
+        Long count = courseRepo.count(query);
+        if (count == 0) {
+            throw  new AppException(ErrorCode.NO_DATA_TO_EXPORT);
+        }
+        List<CourseDTO> courses = courseRepo.search(query, null);
+
+        try (
+                InputStream templateStream = new ClassPathResource("templates/course_template.xlsx").getInputStream();
+                OutputStream outputStream = response.getOutputStream()
+        ) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+            String timestamp = LocalDateTime.now().format(formatter);
+            String resultFileName = String.format("course_report_%s.xlsx", timestamp);
+
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + resultFileName + "\"");
+
+            Context context = new Context();
+            context.putVar("lists", courses);
+
+            JxlsHelper.getInstance().processTemplate(templateStream, outputStream, context);
+
+            response.flushBuffer();
+        } catch (IOException e) {
+            throw new AppException(ErrorCode.FILE_NOT_FOUND);
+        }
+    }
 }

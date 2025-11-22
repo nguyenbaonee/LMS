@@ -151,33 +151,6 @@ public class EnrollmentService {
             enrollmentRepo.saveAll(toSave);
         }
     }
-    public Page<StudentResponse> getStudentsOfCourse(int page, int size, Long courseId) {
-        if (!courseRepo.existsByIdAndStatus(courseId, Status.ACTIVE)) {
-            throw new AppException(ErrorCode.COURSE_NOT_FOUND);
-        }
-
-        Pageable pageable = PageRequest.of(page, size);
-
-        Page<StudentDTO> studentDTOPage = enrollmentRepo.findStudentDTOsByCourseId(courseId, pageable);
-
-        List<Long> studentIds = studentDTOPage.getContent().stream()
-                .map(StudentDTO::getId)
-                .collect(Collectors.toList());
-
-        List<StudentAvatarDTO> avatars = enrollmentRepo.findStudentAvatarsByStudentIds(studentIds);
-
-        Map<Long, List<Image>> avatarMap = avatars.stream()
-                .collect(Collectors.groupingBy(
-                        StudentAvatarDTO::getId,
-                        Collectors.mapping(StudentAvatarDTO::getImage, Collectors.toList())
-                ));
-
-        studentDTOPage.getContent().forEach(s -> s.setAvatar(avatarMap.getOrDefault(s.getId(), List.of())));
-
-        List<StudentResponse> studentResponseList = studentMap.toStdResponseFromDTOs(studentDTOPage.getContent());
-
-        return new PageImpl<>(studentResponseList, pageable, studentDTOPage.getTotalElements());
-    }
 
     @Transactional
     public ApiResponse<Void> deleteEnrollment(Long enrollmentId) {

@@ -6,7 +6,6 @@ import com.example.LMS.dto.Request.StudentRequest;
 import com.example.LMS.dto.Request.StudentUpdate;
 import com.example.LMS.dto.Response.StudentResponse;
 import com.example.LMS.dto.dtoProjection.StudentDTO;
-import com.example.LMS.enums.Status;
 import com.example.LMS.service.StudentService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -30,9 +29,9 @@ public class StudentController {
         this.messageSource = messageSource;
     }
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public StudentResponse createStd(@Valid @ModelAttribute StudentRequest studentRequest,
+    public ApiResponse<StudentResponse> createStd(@Valid @ModelAttribute StudentRequest studentRequest,
                                      @RequestParam("images") List<MultipartFile> images) throws IOException {
-        return studentService.createStd(studentRequest,images);
+        return ApiResponse.of(studentService.createStd(studentRequest,images));
     }
 
     @GetMapping("export")
@@ -41,28 +40,21 @@ public class StudentController {
     }
 
     @GetMapping
-    public Page<StudentDTO> searchStudent(StudentQuery query){
-        return studentService.searchStudent(query);
-    }
-
-
-    @GetMapping("/by-course")
-    public Page<StudentDTO> searchStudentOfCourse(StudentQuery query){
-        return studentService.searchStudentOfCourse(query);
+    public ApiResponse<Page<StudentDTO>> searchStudent(StudentQuery query){
+        return ApiResponse.of(studentService.searchStudent(query));
     }
 
     @PutMapping("/{id}")
-    public StudentResponse updateStd(@PathVariable Long id,@Valid @ModelAttribute StudentUpdate studentUpdate,
+    public ApiResponse<StudentResponse> updateStd(@PathVariable Long id,@Valid @ModelAttribute StudentUpdate studentUpdate,
                                      @RequestParam(value = "images", required = false) List<MultipartFile> images,
                                      @RequestParam(value = "deleteAvatarsId", required = false) List<Long> deleteAvatarsId,
                                      @RequestParam(value = "mainAvatarId", required = false) Long mainAvatarId) throws IOException {
-        return studentService.updateStudent(id, studentUpdate, images, deleteAvatarsId, mainAvatarId);
+        return ApiResponse.of(studentService.updateStudent(id, studentUpdate, images, deleteAvatarsId, mainAvatarId));
     }
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteStd(@PathVariable Long id){
         studentService.deleteStudent(id);
-        return ApiResponse.<Void>builder()
-                .build();
+        return ApiResponse.ok();
     }
 }

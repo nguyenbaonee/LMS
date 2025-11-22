@@ -23,11 +23,16 @@ public class LessonRepoImpl implements LessonRepoExtend {
     public List<LessonDTO> search(LessonQuery lessonQuery, Pageable pageable) {
         Map<String, Object> values = new HashMap<>();
         String sql = "select new com.example.LMS.dto.dtoProjection.LessonDTO(e.id,e.title, e.lessonOrder, e.status) from Lesson e "
-                + createWhereQuery(lessonQuery.getKeyword(), lessonQuery.getCourseId(), lessonQuery.getStatus(), values);
+                + createWhereQuery(lessonQuery.getKeyword(), lessonQuery.getCourseId(), lessonQuery.getStatus(), values)
+                + createOrderQuery(lessonQuery.getSortBy());
         TypedQuery<LessonDTO> query = entityManager.createQuery(sql, LessonDTO.class);
         values.forEach(query::setParameter);
-        query.setFirstResult((pageable.getPageNumber() - 1) * pageable.getPageSize());
-        query.setMaxResults(pageable.getPageSize());
+
+        if (pageable != null) {
+            query.setFirstResult((pageable.getPageNumber() - 1) * pageable.getPageSize());
+            query.setMaxResults(pageable.getPageSize());
+        }
+
         return query.getResultList();
     }
 
@@ -40,6 +45,15 @@ public class LessonRepoImpl implements LessonRepoExtend {
         values.forEach(query::setParameter);
         return (Long) query.getSingleResult();
     }
+
+    private String createOrderQuery(String sortBy) {
+        StringBuilder sql = new StringBuilder();
+        if (StringUtils.hasLength(sortBy)) {
+            sql.append(" order by e.").append(sortBy.replace(".", " "));
+        }
+        return sql.toString();
+    }
+
 
     private String createWhereQuery(String keyword, Long courseId, Status status, Map<String, Object> values) {
         StringBuilder sql = new StringBuilder();

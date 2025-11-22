@@ -14,4 +14,6 @@ public class LessonQuery extends SearchQuery{
     private String keyword;
 
     private Status status;
+
+    private String sortBy = "lessonOrder.asc";
 }

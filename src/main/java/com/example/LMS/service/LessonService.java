@@ -18,7 +18,11 @@ import com.example.LMS.mapper.LessonMapper;
 import com.example.LMS.repo.CourseRepo;
 import com.example.LMS.repo.ImageRepo;
 import com.example.LMS.repo.LessonRepo;
+import jakarta.servlet.http.HttpServletResponse;
+import org.jxls.common.Context;
+import org.jxls.util.JxlsHelper;
 import org.springframework.context.MessageSource;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -28,6 +32,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -156,7 +164,7 @@ public class LessonService {
         return null;
     }
     public Page<LessonDTO> search(LessonQuery query){
-        if(!courseRepo.existsByIdAndStatus(query.getCourseId(), Status.ACTIVE)){
+        if(query.getCourseId() != null && !courseRepo.existsByIdAndStatus(query.getCourseId(), Status.ACTIVE)){
             throw new AppException(ErrorCode.COURSE_NOT_FOUND);
         }
 
@@ -180,12 +188,43 @@ public class LessonService {
         return new PageImpl<>(lessonMapper.toLessonResponseFroms(lessons),pageable,count);
     }
 
-    public ApiResponse<Void> deleteLesson(Long lessonId){
+    public void deleteLesson(Long lessonId){
         Lesson lesson = lessonRepo.findByIdAndStatus(lessonId, Status.ACTIVE)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
         lesson.setStatus(Status.DELETED);
         lessonRepo.save(lesson);
-        return ApiResponse.<Void>builder()
-                .build();
+    }
+
+    public void export(HttpServletResponse response, LessonQuery query) {
+        if(query.getCourseId() != null && !courseRepo.existsByIdAndStatus(query.getCourseId(), Status.ACTIVE)){
+            throw new AppException(ErrorCode.COURSE_NOT_FOUND);
+        }
+
+        Long count = lessonRepo.count(query);
+        if (count == 0) {
+            throw  new AppException(ErrorCode.NO_DATA_TO_EXPORT);
+        }
+        List<LessonDTO> lessons = lessonRepo.search(query, null);
+
+        try (
+                InputStream templateStream = new ClassPathResource("templates/lesson_template.xlsx").getInputStream();
+                OutputStream outputStream = response.getOutputStream()
+        ) {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+            String timestamp = LocalDateTime.now().format(formatter);
+            String resultFileName = String.format("lesson_report_%s.xlsx", timestamp);
+
+            response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + resultFileName + "\"");
+
+            Context context = new Context();
+            context.putVar("lists", lessons);
+
+            JxlsHelper.getInstance().processTemplate(templateStream, outputStream, context);
+
+            response.flushBuffer();
+        } catch (IOException e) {
+            throw new AppException(ErrorCode.FILE_NOT_FOUND);
+        }
     }
 }

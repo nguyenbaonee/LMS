@@ -26,8 +26,10 @@ public class CourseRepoImpl implements CourseRepoExtend {
                 + createWhereQuery(courseQuery.getKeyword(), courseQuery.getStatus(), values);
         TypedQuery<CourseDTO> query = entityManager.createQuery(sql, CourseDTO.class);
         values.forEach(query::setParameter);
-        query.setFirstResult((pageable.getPageNumber() - 1) * pageable.getPageSize());
-        query.setMaxResults(pageable.getPageSize());
+        if (pageable != null) {
+            query.setFirstResult((pageable.getPageNumber() - 1) * pageable.getPageSize());
+            query.setMaxResults(pageable.getPageSize());
+        }
         return query.getResultList();
     }
 

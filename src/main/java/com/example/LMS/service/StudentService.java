@@ -193,29 +193,10 @@ public class StudentService {
         studentRepo.save(student);
     }
 
-    public Page<StudentDTO> searchStudentOfCourse(StudentQuery query) {
-        Pageable pageable = PageRequest.of(query.getPage(), query.getSize());
-        Long count = studentRepo.count(query);
-        if (count == 0) {
-            return new PageImpl<>(List.of(), pageable, 0);
-        }
-        List<StudentDTO> students = studentRepo.search(query, pageable);
-
-        List<Long> ids = students.stream().map(StudentDTO::getId).toList();
-        List<StudentAvatarDTO> studentDTOS = studentRepo.findStudentAvatars(ids);
-        Map<Long, List<Image>> studentMapId = studentDTOS.stream()
-                .collect(Collectors.groupingBy(
-                        StudentAvatarDTO::getId,
-                        Collectors.mapping(StudentAvatarDTO::getImage, Collectors.toList())
-                ));
-        students.forEach(student -> student.setAvatar(studentMapId.getOrDefault(student.getId(), List.of())));
-        return new PageImpl<>(students, pageable, count);
-    }
-
     public void export(HttpServletResponse response, StudentQuery query) {
         Long count = studentRepo.count(query);
         if (count == 0) {
-            throw  new AppException(ErrorCode.FILE_NOT_FOUND);
+            throw  new AppException(ErrorCode.NO_DATA_TO_EXPORT);
         }
         List<StudentDTO> lists = studentRepo.search(query, null);
 
