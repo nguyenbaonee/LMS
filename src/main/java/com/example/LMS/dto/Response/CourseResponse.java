@@ -1,5 +1,6 @@
 package com.example.LMS.dto.Response;
 
+import com.example.LMS.enums.Status;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,4 +21,5 @@ public class CourseResponse {
     List<ImageResponse> thumbnail;
 
     String description;
+    Status status;
 }

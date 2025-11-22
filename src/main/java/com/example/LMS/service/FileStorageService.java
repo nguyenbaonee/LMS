@@ -32,13 +32,14 @@ public class FileStorageService {
         }
         String nameUrl = UUID.randomUUID().toString();
         String filename = file.getOriginalFilename();
-        Path filePath = folder.resolve(filename);
+        String savedFilename = nameUrl + "_" + filename;
+        Path filePath = folder.resolve(savedFilename);
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
         ImageDTO imageDTO= new  ImageDTO();
         imageDTO.setFilename(filename);
-        imageDTO.setUrl("/uploads/" + objectType.name().toLowerCase() + "/" + fileType.name().toLowerCase() + "/" + nameUrl + filename);
+        imageDTO.setUrl("/uploads/" + objectType.name().toLowerCase() + "/"
+                + fileType.name().toLowerCase() + "/" + savedFilename);
         return imageDTO;
-
     }
 
     public void deleteFiles(List<String> files){

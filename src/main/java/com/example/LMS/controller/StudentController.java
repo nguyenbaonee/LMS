@@ -1,11 +1,13 @@
 package com.example.LMS.controller;
 
 import com.example.LMS.dto.ApiResponse;
+import com.example.LMS.dto.Request.StudentQuery;
 import com.example.LMS.dto.Request.StudentRequest;
 import com.example.LMS.dto.Request.StudentUpdate;
 import com.example.LMS.dto.Response.StudentResponse;
 import com.example.LMS.enums.Status;
 import com.example.LMS.service.StudentService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Page;
@@ -41,6 +43,11 @@ public class StudentController {
         return studentService.searchStudent(page,size,name,email,status);
     }
 
+    @GetMapping("/{id}")
+    public StudentResponse getStdById(@PathVariable Long id,@RequestParam(defaultValue = "ACTIVE") Status status){
+        return studentService.getStudentDetail(id,status);
+    }
+
     @PutMapping("/{id}")
     public StudentResponse updateStd(@PathVariable Long id,@Valid @ModelAttribute StudentUpdate studentUpdate,
                                      @RequestParam(value = "images", required = false) List<MultipartFile> images,
@@ -54,5 +61,9 @@ public class StudentController {
         studentService.deleteStudent(id);
         return ApiResponse.<Void>builder()
                 .build();
+    }
+    @GetMapping("/export")
+    public void exportStudent(HttpServletResponse response, StudentQuery query){
+        studentService.export(response, query);
     }
 }

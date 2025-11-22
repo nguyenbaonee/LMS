@@ -7,5 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface ImageRepo extends JpaRepository<Image, Long> {
-    List<Image> findAllByIdInAndStatus(List<Long> ids, Status status);
+
+    List<Image> findAllByIdInAndObjectIdAndStatus(List<Long> deleteAvatarsId, Long id, Status status);
+
+
+    List<Image> findByObjectIdAndStatus(Long id, Status status);
 }

@@ -34,8 +34,9 @@ public class CourseController {
     public Page<CourseResponse> searchCourse(@RequestParam(defaultValue = "0") int page,
                                              @RequestParam(defaultValue = "10") int size,
                                              @RequestParam(required = false) String name,
-                                             @RequestParam(required = false) String code) {
-        return courseService.searchCourse(page, size, name, code);
+                                             @RequestParam(required = false) String code,
+                                             @RequestParam(required = false) Status status) {
+        return courseService.searchCourse(page, size, name, code,status);
     }
 
     @PutMapping("/{id}")
@@ -45,7 +46,10 @@ public class CourseController {
                                        @RequestParam(value = "mainThumbnailId", required = false) Long mainThumbnailId) throws IOException{
         return courseService.updateCourse(id,courseUpdate,images,deleteThumbnailId,mainThumbnailId);
     }
-
+    @GetMapping("/{id}")
+    public CourseResponse getCourseById(@PathVariable Long id, @RequestParam(defaultValue = "ACTIVE") Status status) {
+        return courseService.getCourseDetail(id,status);
+    }
     @DeleteMapping("/{id}")
     public void deleteCourse(@PathVariable Long id) {
         courseService.deleteCourse(id);

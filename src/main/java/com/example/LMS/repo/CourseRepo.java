@@ -21,9 +21,9 @@ public interface CourseRepo extends JpaRepository<Course, Long> {
     SELECT c.id from Course c
     WHERE (:name IS NULL OR LOWER(c.name) LIKE :name ESCAPE '\\')
     AND (:code IS NULL OR c.code = :code)
-    AND c.status ='ACTIVE'
+    AND c.status =:status
 """)
-    Page<Long> searchIds(Pageable pageable, @Param("name") String name, @Param("code") String code);
+    Page<Long> searchIds(Pageable pageable, @Param("name") String name, @Param("code") String code, @Param ("status") Status status);
 
     //list cac Course co trong CourseIds
     @Query("""
@@ -36,14 +36,22 @@ WHERE c.id IN :courseIds
 
     @Query("""
 SELECT new com.example.LMS.dto.dtoProjection.CourseDTO(
-    c.id, c.name, c.code, c.description
+    c.id, c.name, c.code, c.description,c.status
 )
 FROM Course c
 WHERE c.id IN :courseIds
-AND c.status = 'ACTIVE'
+AND c.status = :status
+""")
+    List<CourseDTO> findCourseDTOsByIds1(@Param("courseIds") List<Long> courseIds, @Param("status") Status status);
+    @Query("""
+SELECT new com.example.LMS.dto.dtoProjection.CourseDTO(
+    c.id, c.name, c.code, c.description, c.status
+)
+FROM Course c
+WHERE c.id IN :courseIds
+AND c.status ='ACTIVE'
 """)
     List<CourseDTO> findCourseDTOsByIds(@Param("courseIds") List<Long> courseIds);
-
     Optional<Course> findByIdAndStatus(Long id, Status status);
     boolean existsByIdAndStatus(Long id, Status status);
 

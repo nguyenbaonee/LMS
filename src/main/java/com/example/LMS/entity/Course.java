@@ -29,7 +29,6 @@ public class Course {
     String code;
 
     @OneToMany
-//    @JoinColumn(name = "objectId", referencedColumnName = "id", insertable = false, updatable = false)
     @Where(clause = "object_type='COURSE' AND type='THUMBNAIL' ")
     List<Image> thumbnail;
 

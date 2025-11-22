@@ -4,6 +4,7 @@ import com.example.LMS.dto.dtoProjection.StudentAvatarDTO;
 import com.example.LMS.dto.dtoProjection.StudentDTO;
 import com.example.LMS.entity.Student;
 import com.example.LMS.enums.Status;
+import com.example.LMS.repo.extend.StudentRepoExtend;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,7 +14,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
-public interface StudentRepo extends JpaRepository<Student, Long> {
+public interface StudentRepo extends JpaRepository<Student, Long>, StudentRepoExtend {
     boolean existsByEmail(String email);
     @Query("""
     SELECT s.id from Student s

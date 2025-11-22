@@ -6,9 +6,8 @@ import com.example.LMS.dto.ApiResponse;
 import com.example.LMS.dto.Request.CourseRequest;
 import com.example.LMS.dto.Request.CourseUpdate;
 import com.example.LMS.dto.Response.CourseResponse;
-import com.example.LMS.dto.dtoProjection.CourseDTO;
-import com.example.LMS.dto.dtoProjection.CourseImageDTO;
-import com.example.LMS.dto.dtoProjection.ImageDTO;
+import com.example.LMS.dto.Response.StudentResponse;
+import com.example.LMS.dto.dtoProjection.*;
 import com.example.LMS.entity.Course;
 import com.example.LMS.entity.Image;
 import com.example.LMS.enums.ImageType;
@@ -95,7 +94,7 @@ public class CourseService {
         return courseMapper.toCourseResponse(course);
     }
 
-    public Page<CourseResponse> searchCourse(int page, int size, String name, String code){
+    public Page<CourseResponse> searchCourse(int page, int size, String name, String code, Status status) {
         if (name != null && !name.isBlank()) {
             name = "%" + name.replace("\\", "\\\\")
                     .replace("%", "\\%")
@@ -105,13 +104,13 @@ public class CourseService {
             name = null;
         }
         Pageable pageable = PageRequest.of(page, size);
-        Page<Long> courseIds = courseRepo.searchIds(pageable, name, code);
+        Page<Long> courseIds = courseRepo.searchIds(pageable, name, code, status);
         if (courseIds.getTotalElements() == 0) {
             return new PageImpl<>(List.of(), pageable, 0);
         }
         List<Long> ids = courseIds.getContent();
         List<CourseImageDTO> coursesImg = courseRepo.findCoursesWithActiveThumbnails(ids);
-        List<CourseDTO> courses = courseRepo.findCourseDTOsByIds(ids);
+        List<CourseDTO> courses = courseRepo.findCourseDTOsByIds1(ids, status);
         Map<Long, List<Image>> thumbnailsMap = coursesImg.stream()
                 .collect(Collectors.groupingBy(
                         CourseImageDTO::getId,
@@ -122,7 +121,28 @@ public class CourseService {
         List<CourseResponse> courseResponseList = courseMapper.toResponseFromDTOs(courses);
         return new PageImpl<>(courseResponseList, pageable, courseIds.getTotalElements());
     }
+    public CourseResponse getCourseDetail(Long id, Status status) {
 
+        List<CourseImageDTO> imageDTOs = courseRepo.findCoursesWithActiveThumbnails(List.of(id));
+        if(imageDTOs.isEmpty()){
+            throw new AppException(ErrorCode.COURSE_NOT_FOUND);
+        }
+        // Lấy thông tin CourseDTO
+        List<CourseDTO> courseDTOList = courseRepo.findCourseDTOsByIds1(List.of(id), status);
+
+        // Gom images theo id
+        Map<Long, List<Image>> imgMap = imageDTOs.stream()
+                .collect(Collectors.groupingBy(
+                        CourseImageDTO::getId,
+                        Collectors.mapping(CourseImageDTO::getThumbnail, Collectors.toList())
+                ));
+
+        // Set img vào DTO
+        CourseDTO dto = courseDTOList.get(0);
+        dto.setThumbnail(imgMap.getOrDefault(id, List.of()));
+
+        return courseMapper.toResponseFromDTO(dto);
+    }
     @Transactional(rollbackFor = Exception.class)
     public CourseResponse updateCourse(Long id, CourseUpdate courseUpdate, List<MultipartFile> images,
                                        List<Long> deleteThumbnailId, Long mainThumbnailId) throws IOException {
@@ -132,20 +152,9 @@ public class CourseService {
 
         courseMapper.updateCourse(courseUpdate, course);
 
-        //Xoa mem cac thumbnail co trong list xoa
-//        if(deleteThumbnailId != null && !deleteThumbnailId.isEmpty()){
-//            for(Long deleteThumbnail : deleteThumbnailId){
-//                Image image = imageRepo.findById(deleteThumbnail)
-//                        .orElseThrow(() -> new AppException(ErrorCode.THUMBNAIL_NOT_FOUND));
-//                image.setStatus(Status.DELETED);
-//                imageRepo.save(image);
-//            }
-//        }
         if(deleteThumbnailId != null && !deleteThumbnailId.isEmpty()){
 
-//            List<Image> imageList = imageRepo.findAllById(deleteThumbnailId);
-            List<Image> imageList = imageRepo.findAllByIdInAndStatus(deleteThumbnailId,Status.ACTIVE);
-
+            List<Image> imageList = imageRepo.findAllByIdInAndObjectIdAndStatus(deleteThumbnailId, course.getId(), Status.ACTIVE);
             if (imageList.size() != deleteThumbnailId.size()) {
                 throw new AppException(ErrorCode.THUMBNAIL_NOT_FOUND);
             }
@@ -155,6 +164,24 @@ public class CourseService {
             imageRepo.saveAll(imageList);
         }
 
+        List<Image> thumbActive = imageRepo.findByObjectIdAndStatus(course.getId(), Status.ACTIVE);
+        //xu ly thumb hien thi
+        if(mainThumbnailId != null){
+            boolean exists = thumbActive.stream()
+                    .anyMatch(img -> img.getId().equals(mainThumbnailId));
+
+            if (!exists) {
+                throw new AppException(ErrorCode.THUMBNAIL_NOT_FOUND);
+            }
+            for(Image img : thumbActive) {
+                img.setPrimary(img.getId().equals(mainThumbnailId));
+            }
+            imageRepo.saveAll(thumbActive);
+        } else if(!thumbActive.isEmpty()){
+            thumbActive.forEach(img -> img.setPrimary(false));
+            thumbActive.get(0).setPrimary(true);
+            imageRepo.saveAll(thumbActive);
+        }
 
         //list anh moi
         List<Image> thumbnail = new ArrayList<>();
@@ -180,25 +207,6 @@ public class CourseService {
             imageRepo.saveAll(thumbnail);
             courseRepo.save(course);
 
-            List<Image> thumbActive = course.getThumbnail().stream()
-                    .filter(img -> img.getStatus() == Status.ACTIVE)
-                    .toList();
-
-            //xu ly thumb hien thi
-            if(mainThumbnailId != null){
-                boolean exists = thumbActive.stream()
-                        .anyMatch(img -> img.getId().equals(mainThumbnailId));
-
-                if (!exists) {
-                    throw new AppException(ErrorCode.THUMBNAIL_NOT_FOUND);
-                }
-                for(Image img : thumbActive) {
-                    img.setPrimary(img.getId().equals(mainThumbnailId));
-                }
-            } else if(!thumbActive.isEmpty()){
-                thumbActive.forEach(img -> img.setPrimary(false));
-                thumbActive.get(0).setPrimary(true);
-            }
             return courseMapper.toCourseResponse(course);
         }
         catch (Exception e){
