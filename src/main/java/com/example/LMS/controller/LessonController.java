@@ -39,6 +39,20 @@ public class LessonController {
                 .data(lessonService.createLesson(courseId, lessonRequest, images, videos))
                 .build();
     }
+    @PutMapping("/{lessonId}")
+    public ApiResponse<LessonResponse> updateLesson(@PathVariable Long lessonId, @Valid @ModelAttribute LessonRequest lessonRequest,
+                                    @RequestParam(value = "images", required = false) List<MultipartFile> images,
+                                    @RequestParam(value = "videos", required = false) List<MultipartFile> videos,
+                                    @RequestParam(value = "deleteThumbnailId", required = false) List<Long> deleteThumbnailId,
+                                    @RequestParam(value = "mainThumbnailId", required = false) Long mainThumbnailId,
+                                    @RequestParam(value = "deleteVideos", required = false) List<Long> deleteVideos) throws IOException {
+        Locale locale = LocaleContextHolder.getLocale();
+        return ApiResponse.<LessonResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message(messageSource.getMessage("response.success", null, locale))
+                .data(lessonService.updateLesson(lessonId, lessonRequest, images, videos, deleteThumbnailId, mainThumbnailId, deleteVideos))
+                .build();
+    }
     @GetMapping
     public ApiResponse<Page<LessonDTO>> getLessonByCourse(@RequestParam(defaultValue = "0") int page,
                                              @RequestParam(defaultValue = "10") int size,

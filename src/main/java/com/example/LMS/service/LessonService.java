@@ -139,23 +139,101 @@ public class LessonService {
             throw ex;
         }
     }
-
-    public LessonResponse updateLesson(Long lessonId, LessonRequest lessonRequest, List<MultipartFile> images, List<MultipartFile> videos,
+    @Transactional
+    public LessonResponse updateLesson(Long lessonId, LessonRequest lessonRequest, List<MultipartFile> images,
+                                       List<MultipartFile> videos,
                                        List<Long> deleteThumbnailId, Long mainThumbnailId,
                                        List<Long> deleteVideos) throws IOException {
         Lesson lesson = lessonRepo.findByIdAndStatus(lessonId, Status.ACTIVE)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));
         lessonMapper.updateLesson(lessonRequest, lesson);
         if(deleteThumbnailId != null && !deleteThumbnailId.isEmpty()){
-            for(Long deleteThumbnail : deleteThumbnailId){
-                Image image = imageRepo.findById(deleteThumbnail)
-                        .orElseThrow(() -> new AppException(ErrorCode.THUMBNAIL_NOT_FOUND));
-                image.setStatus(Status.DELETED);
-                imageRepo.save(image);
+            List<Image> imageList = imageRepo.findAllByIdInAndObjectIdAndStatus(deleteThumbnailId,
+                    lesson.getId(), Status.ACTIVE);
+            if(imageList.size() != deleteThumbnailId.size()){
+                throw new AppException(ErrorCode.THUMBNAIL_NOT_FOUND);
             }
+            imageList.forEach(img -> img.setStatus(Status.DELETED));
+            imageRepo.saveAll(imageList);
         }
 
-        return null;
+        List<Image> thumbActive = imageRepo.findByObjectIdAndStatus(lesson.getId(), Status.ACTIVE);
+        if(mainThumbnailId != null){
+            boolean exists = thumbActive.stream().anyMatch(img -> img.getId().equals(mainThumbnailId));
+            if(!exists){
+                throw new AppException(ErrorCode.THUMBNAIL_NOT_FOUND);
+            }
+            thumbActive.forEach(img -> img.setPrimary(img.getId().equals(mainThumbnailId)));
+            imageRepo.saveAll(thumbActive);
+        } else if(!thumbActive.isEmpty()){
+            thumbActive.forEach(img -> img.setPrimary(false));
+            thumbActive.get(0).setPrimary(true);
+            imageRepo.saveAll(thumbActive);
+        }
+
+        if(deleteVideos != null && !deleteVideos.isEmpty()){
+            List<Image> videoList = imageRepo.findAllByIdInAndObjectIdAndStatus(deleteVideos,
+                    lesson.getId(), Status.ACTIVE);
+            if(videoList.size() != deleteVideos.size()){
+                throw new AppException(ErrorCode.VIDEO_NOT_EMPTY);
+            }
+            videoList.forEach(v -> v.setStatus(Status.DELETED));
+            imageRepo.saveAll(videoList);
+        }
+
+        List<Image> newThumbnails = new ArrayList<>();
+        List<Image> newVideos = new ArrayList<>();
+        List<String> savedFilePaths = new ArrayList<>();
+
+        try {
+            // Lưu ảnh
+            if(images != null && !images.isEmpty()){
+                for(MultipartFile file : images){
+                    ImageDTO imageDTO = fileStorageService.save(file, ObjectType.LESSON, ImageType.THUMBNAIL);
+                    Image img = new Image();
+                    img.setUrl(imageDTO.getUrl());
+                    img.setFileName(imageDTO.getFilename());
+                    img.setType(ImageType.THUMBNAIL);
+                    img.setObjectType(ObjectType.LESSON);
+                    img.setObjectId(lesson.getId());
+                    newThumbnails.add(img);
+                    savedFilePaths.add(imageDTO.getUrl());
+                }
+                imageRepo.saveAll(newThumbnails);
+                lesson.getThumbnail().addAll(newThumbnails);
+            }
+
+            // Lưu video
+            if(videos != null && !videos.isEmpty()){
+                for(MultipartFile file : videos){
+                    ImageDTO videoDTO = fileStorageService.save(file, ObjectType.LESSON, ImageType.VIDEO);
+                    Image video = new Image();
+                    video.setUrl(videoDTO.getUrl());
+                    video.setFileName(videoDTO.getFilename());
+                    video.setType(ImageType.THUMBNAIL);
+                    video.setObjectType(ObjectType.LESSON);
+                    video.setObjectId(lesson.getId());
+                    newThumbnails.add(video);
+                    savedFilePaths.add(videoDTO.getUrl());
+                    video.setUrl(videoDTO.getUrl());
+                    video.setFileName(videoDTO.getFilename());
+                    video.setObjectType(ObjectType.LESSON);
+                    video.setObjectId(lesson.getId());
+                    newVideos.add(video);
+                    savedFilePaths.add(videoDTO.getUrl());
+                }
+                imageRepo.saveAll(newVideos);
+                lesson.getVideoUrl().addAll(newVideos);
+            }
+
+            lessonRepo.save(lesson);
+
+            return lessonMapper.toLessonResponse(lesson);
+        } catch(Exception e){
+            // rollback file nếu có lỗi
+            fileStorageService.deleteFiles(savedFilePaths);
+            throw e;
+        }
     }
     public Page<LessonDTO> getLessonByCourse(int page, int size, Long courseId, Status status){
         if(!courseRepo.existsByIdAndStatus(courseId, Status.ACTIVE)){
@@ -176,6 +254,7 @@ public class LessonService {
                 thumbMap.getOrDefault(lessonDTO.getId(), List.of())));
         return new PageImpl<>(lessonMapper.toLessonResponseFroms(lessonDTOS),pageable,lessons.getTotalElements());
     }
+    @Transactional
     public ApiResponse<Void> deleteLesson(Long lessonId){
         Lesson lesson = lessonRepo.findByIdAndStatus(lessonId, Status.ACTIVE)
                 .orElseThrow(() -> new AppException(ErrorCode.LESSON_NOT_FOUND));

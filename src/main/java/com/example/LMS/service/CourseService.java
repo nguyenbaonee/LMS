@@ -7,7 +7,6 @@ import com.example.LMS.dto.Request.CourseQuery;
 import com.example.LMS.dto.Request.CourseRequest;
 import com.example.LMS.dto.Request.CourseUpdate;
 import com.example.LMS.dto.Response.CourseResponse;
-import com.example.LMS.dto.Response.StudentResponse;
 import com.example.LMS.dto.dtoProjection.*;
 import com.example.LMS.entity.Course;
 import com.example.LMS.entity.Image;
