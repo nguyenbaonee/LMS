@@ -44,4 +44,5 @@ AND s.status = :status
 
     Optional<Student> findByIdAndStatus(Long id, Status status);
 
+    boolean existsByIdAndStatus(Long id, Status status);
 }

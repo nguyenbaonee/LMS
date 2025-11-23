@@ -38,15 +38,17 @@ public class CourseService {
     FileStorageService fileStorageService;
     ImageRepo imageRepo;
     MessageSource messageSource;
+    LessonService lessonService;
 
     public CourseService(CourseRepo courseRepo, CourseMapper courseMapper,
                          FileStorageService fileStorageService, ImageRepo imageRepo,
-                         MessageSource messageSource) {
+                         MessageSource messageSource, LessonService lessonService) {
         this.courseRepo = courseRepo;
         this.courseMapper = courseMapper;
         this.fileStorageService = fileStorageService;
         this.imageRepo = imageRepo;
         this.messageSource = messageSource;
+        this.lessonService = lessonService;
     }
 
 
@@ -220,7 +222,11 @@ public class CourseService {
         Course course = courseRepo.findByIdAndStatus(id, Status.ACTIVE)
                 .orElseThrow(() -> new AppException(ErrorCode.COURSE_NOT_FOUND));
         course.setStatus(Status.DELETED);
-        //xoa them lesson, enrollment neu can
+        //xoa them lesson
+        List<LessonDTO> lessonDTOS = lessonService.getLessonByCourse(0,10,id, Status.ACTIVE).getContent();
+        for(LessonDTO lessonDTO : lessonDTOS){
+            lessonService.deleteLesson(lessonDTO.getId());
+        }
         courseRepo.save(course);
         return ApiResponse.<Void>builder()
                 .build();

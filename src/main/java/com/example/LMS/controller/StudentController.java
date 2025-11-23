@@ -39,7 +39,7 @@ public class StudentController {
                                                @RequestParam(defaultValue = "10") int size,
                                                @RequestParam(required = false) String name,
                                                @RequestParam(required = false) String email,
-                                               @RequestParam(required = false) Status status){
+                                               @RequestParam(defaultValue = "ACTIVE") Status status){
         return studentService.searchStudent(page,size,name,email,status);
     }
 

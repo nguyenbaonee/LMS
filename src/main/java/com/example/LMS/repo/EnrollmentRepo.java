@@ -1,7 +1,6 @@
 package com.example.LMS.repo;
 
-import com.example.LMS.dto.dtoProjection.StudentAvatarDTO;
-import com.example.LMS.dto.dtoProjection.StudentDTO;
+import com.example.LMS.dto.dtoProjection.*;
 import com.example.LMS.entity.Enrollment;
 import com.example.LMS.enums.Status;
 import org.springframework.data.domain.Page;
@@ -25,9 +24,9 @@ SELECT new com.example.LMS.dto.dtoProjection.StudentDTO(s.id, s.name, s.email,s.
 FROM Enrollment e
 JOIN e.student s
 WHERE e.course.id = :courseId
-AND s.status = 'ACTIVE'
+AND s.status = :status
 """)
-    Page<StudentDTO> findStudentDTOsByCourseId(@Param("courseId") Long courseId, Pageable pageable);
+    Page<StudentDTO> findStudentDTOsByCourseId(@Param("courseId") Long courseId,Status status, Pageable pageable);
 
     @Query("""
 SELECT new com.example.LMS.dto.dtoProjection.StudentAvatarDTO(s.id, i)
@@ -37,4 +36,44 @@ WHERE s.id IN :ids
 """)
     List<StudentAvatarDTO> findStudentAvatarsByStudentIds(@Param("ids") List<Long> ids);
 
+    @Query("""
+SELECT new com.example.LMS.dto.dtoProjection.CourseDTO(
+    e.course.id,
+    e.course.name,
+    e.course.code,
+    e.course.description,
+    e.course.status
+)
+FROM Enrollment e
+WHERE e.student.id = :studentId AND e.status = :status
+""")
+    Page<CourseDTO> findCourseImageDTO(
+            @Param("studentId") Long studentId,
+            @Param("status") Status status,
+            Pageable pageable
+    );
+
+    @Query("""
+SELECT new com.example.LMS.dto.dtoProjection.CourseImageDTO(c.id, i)
+FROM Course c
+LEFT JOIN Image i ON i.objectId = c.id AND i.objectType = 'COURSE' AND i.status = 'ACTIVE'
+WHERE c.id IN :courseIds
+""")
+    List<CourseImageDTO> findCourseImageDTOBy1(@Param("courseIds") List<Long> courseIds);
+
+    @Query("""
+SELECT new com.example.LMS.dto.dtoProjection.EnrollmentCourseDTO(
+    e.id, e.enrolledAt,
+    e.course.id, e.course.name, e.course.code,
+    e.course.description, e.course.status
+)
+FROM Enrollment e
+WHERE e.student.id = :studentId AND e.status = :status
+""")
+    Page<EnrollmentCourseDTO> findEnrollmentsWithCourse(@Param("studentId") Long studentId,
+                                                        @Param("status") Status status,
+                                                        Pageable pageable);
+
+    List<Long> findByStudentIdAndStatus(java.lang.Long studentId, Status status, Pageable pageable);
 }
+

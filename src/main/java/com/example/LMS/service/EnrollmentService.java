@@ -5,12 +5,10 @@ import com.example.LMS.Exception.ErrorCode;
 import com.example.LMS.dto.ApiResponse;
 import com.example.LMS.dto.Request.EnrollmentRequest;
 import com.example.LMS.dto.Request.EnrollmentUpdate;
+import com.example.LMS.dto.Response.CourseResponse;
 import com.example.LMS.dto.Response.EnrollmentResponse;
 import com.example.LMS.dto.Response.StudentResponse;
-import com.example.LMS.dto.dtoProjection.CourseDTO;
-import com.example.LMS.dto.dtoProjection.CourseImageDTO;
-import com.example.LMS.dto.dtoProjection.StudentAvatarDTO;
-import com.example.LMS.dto.dtoProjection.StudentDTO;
+import com.example.LMS.dto.dtoProjection.*;
 import com.example.LMS.entity.Course;
 import com.example.LMS.entity.Enrollment;
 import com.example.LMS.entity.Image;
@@ -95,10 +93,50 @@ public class EnrollmentService {
         enrollmentRepo.saveAll(enrollmentList);
         return enrollmentMapper.toEnrollmentResponses(enrollmentList);
     }
+    public Page<EnrollmentResponse> getEnrollmentsByStudent(
+            int page, int size, Long studentId, Status status
+    ) {
+        if(!studentRepo.existsByIdAndStatus(studentId, Status.ACTIVE)){
+            throw new AppException(ErrorCode.STUDENTNOTFOUND);
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<EnrollmentCourseDTO> enrollmentPage =
+                enrollmentRepo.findEnrollmentsWithCourse(studentId, status, pageable);
+
+        List<Long> courseIds = enrollmentPage.getContent().stream()
+                .map(e -> e.getCourse().getId())
+                .toList();
+
+        List<CourseImageDTO> courseImages = enrollmentRepo.findCourseImageDTOBy1(courseIds);
+        Map<Long, List<Image>> thumbMap = courseImages.stream()
+                .collect(Collectors.groupingBy(
+                        CourseImageDTO::getId,
+                        Collectors.mapping(CourseImageDTO::getThumbnail, Collectors.toList())
+                ));
+
+        List<EnrollmentResponse> responses = enrollmentPage.getContent().stream()
+                .map(e -> {
+                    CourseDTO courseDTO = e.getCourse();
+                    Course course = courseMapper.toCourseFromDTO(courseDTO);
+                    courseDTO.setThumbnail(thumbMap.getOrDefault(courseDTO.getId(), List.of()));
+
+                    EnrollmentResponse resp = new EnrollmentResponse();
+                    resp.setId(e.getEnrollmentId());
+                    resp.setCourse(course);
+                    resp.setEnrolledAt(e.getEnrolledAt());
+                    return resp;
+                }).toList();
+
+        return new PageImpl<>(responses, pageable, enrollmentPage.getTotalElements());
+    }
     @Transactional
-    public void updateEnrollment(Long studentId, EnrollmentUpdate enrollmentUpdate) {
-        Student student = studentRepo.findByIdAndStatus(studentId, Status.ACTIVE)
-                .orElseThrow(() -> new AppException(ErrorCode.STUDENTNOTFOUND));
+    public void updateEnrollment(Long enrollmentId, EnrollmentUpdate enrollmentUpdate) {
+        Enrollment enrollment = enrollmentRepo.findByIdAndStatus(enrollmentId, Status.ACTIVE)
+                .orElseThrow(() -> new AppException(ErrorCode.ENROLLMENT_NOT_FOUND));
+        Student student = enrollment.getStudent();
+        Long studentId = student.getId();
         List<Long> newCourseIds = enrollmentUpdate.getNewCourseIds();
         List<Long> deleteCourseIds = enrollmentUpdate.getDeleteCourseIds();
 
@@ -151,14 +189,14 @@ public class EnrollmentService {
             enrollmentRepo.saveAll(toSave);
         }
     }
-    public Page<StudentResponse> getStudentsOfCourse(int page, int size, Long courseId) {
-        if (!courseRepo.existsByIdAndStatus(courseId, Status.ACTIVE)) {
+    public Page<StudentResponse> getStudentsOfCourse(int page, int size, Long courseId,Status status) {
+        if (!courseRepo.existsByIdAndStatus(courseId, status)) {
             throw new AppException(ErrorCode.COURSE_NOT_FOUND);
         }
 
         Pageable pageable = PageRequest.of(page, size);
 
-        Page<StudentDTO> studentDTOPage = enrollmentRepo.findStudentDTOsByCourseId(courseId, pageable);
+        Page<StudentDTO> studentDTOPage = enrollmentRepo.findStudentDTOsByCourseId(courseId, status, pageable);
 
         List<Long> studentIds = studentDTOPage.getContent().stream()
                 .map(StudentDTO::getId)

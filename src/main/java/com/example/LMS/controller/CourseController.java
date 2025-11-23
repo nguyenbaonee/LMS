@@ -35,7 +35,7 @@ public class CourseController {
                                              @RequestParam(defaultValue = "10") int size,
                                              @RequestParam(required = false) String name,
                                              @RequestParam(required = false) String code,
-                                             @RequestParam(required = false) Status status) {
+                                             @RequestParam(defaultValue = "ACTIVE") Status status) {
         return courseService.searchCourse(page, size, name, code,status);
     }
 
