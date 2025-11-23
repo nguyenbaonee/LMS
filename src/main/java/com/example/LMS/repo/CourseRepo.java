@@ -4,6 +4,7 @@ import com.example.LMS.dto.dtoProjection.CourseDTO;
 import com.example.LMS.dto.dtoProjection.CourseImageDTO;
 import com.example.LMS.entity.Course;
 import com.example.LMS.enums.Status;
+import com.example.LMS.repo.extend.CourseRepoExtend;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,7 +14,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
-public interface CourseRepo extends JpaRepository<Course, Long> {
+public interface CourseRepo extends JpaRepository<Course, Long>, CourseRepoExtend {
     boolean existsByCode(String code);
 
     //page<long> CourseIds dung dieu kien search

@@ -1,5 +1,6 @@
 package com.example.LMS.controller;
 
+import com.example.LMS.dto.Request.CourseQuery;
 import com.example.LMS.dto.Request.CourseRequest;
 import com.example.LMS.dto.Request.CourseUpdate;
 import com.example.LMS.dto.Response.CourseResponse;
@@ -7,6 +8,7 @@ import com.example.LMS.entity.Course;
 import com.example.LMS.enums.Status;
 import com.example.LMS.repo.CourseRepo;
 import com.example.LMS.service.CourseService;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
@@ -49,6 +51,10 @@ public class CourseController {
     @GetMapping("/{id}")
     public CourseResponse getCourseById(@PathVariable Long id, @RequestParam(defaultValue = "ACTIVE") Status status) {
         return courseService.getCourseDetail(id,status);
+    }
+    @GetMapping("/export")
+    public void exportCourse(HttpServletResponse response, CourseQuery query) {
+        courseService.exportCourse(response, query);
     }
     @DeleteMapping("/{id}")
     public void deleteCourse(@PathVariable Long id) {
